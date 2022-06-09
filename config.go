@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/joyqi/dahuang/auth"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
@@ -12,10 +11,10 @@ import (
 type Config struct {
 	log  *log.Logger
 	Data ConfigData
-	Auth *auth.Auth
+	AuthType
 }
 
-type TryAuthConfig struct {
+type AuthType struct {
 	Type string `yaml:"type"`
 }
 
@@ -25,6 +24,7 @@ type ConfigData struct {
 	Auth yaml.Node `yaml:"auth"`
 }
 
+// NewConfig read and parse a yaml file
 func NewConfig(file string) *Config {
 	c := Config{
 		log: log.New(os.Stderr, "dahuang: ", log.Ldate|log.Ltime),
@@ -35,8 +35,6 @@ func NewConfig(file string) *Config {
 	}
 
 	c.parse(file)
-	c.parseAuth()
-
 	return &c
 }
 
@@ -50,29 +48,9 @@ func (c *Config) parse(file string) {
 	if err != nil {
 		c.log.Fatal(fmt.Sprintf("error parsing config: %s", err))
 	}
-}
 
-func (c *Config) parseAuth() {
-	tryAuthConfig := TryAuthConfig{}
-	err := c.Data.Auth.Encode(&tryAuthConfig)
-
+	err = c.Data.Auth.Decode(&c.AuthType)
 	if err != nil {
 		c.log.Fatal(fmt.Sprintf("error parsing auth config: %s", err))
 	}
-
-	var a *auth.Auth
-
-	switch tryAuthConfig.Type {
-	case "oauth":
-		a = &auth.OAuth{}
-	default:
-		c.log.Fatal("wrong auth type: %s", tryAuthConfig.Type)
-	}
-
-	err = c.Data.Auth.Encode(a)
-	if err != nil {
-		c.log.Fatal(fmt.Sprintf("error parsing %s config: %s", tryAuthConfig.Type, err))
-	}
-
-	c.Auth = a
 }

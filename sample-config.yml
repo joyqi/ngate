@@ -1,1 +1,5 @@
 port: 9000
+auth:
+  type: "oauth"
+  app_key: "1213123"
+  app_secret: "12313"
