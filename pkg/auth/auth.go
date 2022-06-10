@@ -2,35 +2,46 @@ package auth
 
 import (
 	"github.com/joyqi/dahuang/pkg/config"
-	"github.com/joyqi/dahuang/pkg/logger"
+	"github.com/joyqi/dahuang/pkg/log"
+	"gopkg.in/yaml.v3"
 )
 
-type Auth interface {
-	New()
+type TryType struct {
+	Type string `yaml:"type"`
 }
 
-// NewAuth parse the auth block of the config file
-func NewAuth(c *config.Config) Auth {
-	err := c.Data.Auth.Decode(&c.AuthType)
+type Auth interface {
+	Init(node *yaml.Node)
+	Handler()
+}
 
-	if err != nil {
-		logger.Fatal("error parsing auth config: %s", err)
+func authType(cfg *config.Config) string {
+	tryType := TryType{
+		Type: "oauth",
 	}
 
+	err := cfg.Auth.Decode(&tryType)
+	if err != nil {
+		log.Fatal("error parsing auth block: %s", err)
+	}
+
+	// get auth type
+	return tryType.Type
+}
+
+// New parse the auth block of the config file
+func New(cfg *config.Config) Auth {
+	authType := authType(cfg)
 	var a Auth
 
-	switch c.AuthType.Type {
+	switch authType {
 	case "oauth":
 		a = &OAuth{}
 	default:
-		logger.Fatal("wrong auth type: %s", c.AuthType.Type)
+		log.Fatal("wrong auth type: %s", authType)
 	}
 
-	err = c.Data.Auth.Decode(a)
-	if err != nil {
-		logger.Fatal("error parsing %s config: %s", c.AuthType.Type, err)
-	}
-
-	logger.Success("using auth: %s", c.AuthType.Type)
+	a.Init(&cfg.Auth)
+	log.Success("using auth: %s", authType)
 	return a
 }

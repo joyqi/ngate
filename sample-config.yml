@@ -1,5 +1,18 @@
-port: 9000
 auth:
   type: "oauth"
   app_key: "1213123"
   app_secret: "12313"
+  access_token_url: "https://"
+  authorize_url: "https://"
+pipes:
+  - type: "http"
+    port: 9000
+    backends:
+      - hostname: "backyard-git.segmentfault.com"
+        remote_addr: "192.168.2"
+        remote_port: 8080
+      - hostname: "backyard-stats.segmentfault.com"
+        type: "frp"
+        local_addr: "0.0.0.0"
+        local_port: 8888
+        secret: "xasfasdf"
