@@ -1,11 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/joyqi/dahuang/pkg/auth"
+	"github.com/joyqi/dahuang/pkg/config"
+)
 
 func main() {
 	args := NewArgs()
-	config := NewConfig(args.configFile)
-	auth := config.Auth()
+	cfg := config.NewConfig(args.configFile)
+	a := auth.NewAuth(cfg)
 
-	fmt.Println(auth)
+	fmt.Println(a)
 }
