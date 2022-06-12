@@ -6,27 +6,35 @@ import (
 	"io/ioutil"
 )
 
-type Config struct {
+type Parser struct {
 	Pipes yaml.Node `yaml:",flow"`
 	Auth  yaml.Node `yaml:"auth"`
 }
 
-// New read and parse a yaml file
-func New(file string) *Config {
-	c := Config{}
-
-	c.parse(file)
-	return &c
+type Config struct {
+	Auth  AuthConfig
+	Pipes []PipeConfig
 }
 
-func (c *Config) parse(file string) {
+func (p *Parser) parse(file string) *Config {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal("error reading %s: %s", file, err)
 	}
 
-	err = yaml.Unmarshal(data, &c)
+	err = yaml.Unmarshal(data, &p)
 	if err != nil {
 		log.Fatal("error parsing: %s", err)
 	}
+
+	return &Config{
+		Auth:  NewAuth(&p.Auth),
+		Pipes: NewPipes(&p.Pipes),
+	}
+}
+
+// New read and parse a yaml file
+func New(file string) *Config {
+	p := Parser{}
+	return p.parse(file)
 }
