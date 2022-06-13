@@ -1,31 +1,22 @@
 package pipe
 
-import (
-	"github.com/joyqi/dahuang/pkg/log"
-	"gopkg.in/yaml.v3"
-)
+import "github.com/joyqi/dahuang/pkg/log"
 
 type Http struct {
-	Host     string    `yaml:"host"`
-	Port     int       `yaml:"port"`
-	Backends yaml.Node `yaml:"backends,flow"`
+	Host string
+	Port int
 }
 
-func (http *Http) Init(node *yaml.Node) {
-	err := node.Decode(http)
-	if err != nil {
-		log.Fatal("error parsing pipe config: %s", err)
+func (h *Http) Serve() {
+	var host string
+
+	if h.Host == "" {
+		host = "0.0.0.0"
+	} else {
+		host = h.Host
 	}
 
-	if http.Port <= 0 {
-		log.Fatal("wrong http port number: %d", http.Port)
+	if h.Port <= 0 {
+		log.Fatal("wrong port number %d for %s", h.Port, host)
 	}
-
-	if http.Backends.Kind != yaml.SequenceNode {
-		log.Fatal("missing backends")
-	}
-}
-
-func (http *Http) Handle() {
-
 }

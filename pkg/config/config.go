@@ -6,35 +6,49 @@ import (
 	"io/ioutil"
 )
 
-type Parser struct {
-	Pipes yaml.Node `yaml:",flow"`
-	Auth  yaml.Node `yaml:"auth"`
-}
-
 type Config struct {
-	Auth  AuthConfig
-	Pipes []PipeConfig
+	Auth  AuthConfig   `yaml:"auth"`
+	Pipes []PipeConfig `yaml:"pipes,flow"`
 }
 
-func (p *Parser) parse(file string) *Config {
+type AuthConfig struct {
+	Kind string `yaml:"kind"`
+
+	// for oauth
+	AppKey         string `yaml:"app_key"`
+	AppSecret      string `yaml:"app_secret"`
+	AccessTokenUrl string `yaml:"access_token_url"`
+	AuthorizeUrl   string `yaml:"authorize_url"`
+}
+
+type PipeConfig struct {
+	Kind     string          `yaml:"kind"`
+	Host     string          `yaml:"host"`
+	Port     int             `yaml:"port"`
+	Backends []BackendConfig `yaml:"backends,flow"`
+}
+
+type BackendConfig struct {
+	Kind string `yaml:"kind"`
+
+	// for proxy
+	Hostname   string `yaml:"hostname"`
+	RemoteAddr string `yaml:"remote_addr"`
+	RemotePort int    `yaml:"remote_port"`
+}
+
+// New read and parse a yaml file
+func New(file string) *Config {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal("error reading %s: %s", file, err)
 	}
 
-	err = yaml.Unmarshal(data, &p)
+	cfg := Config{}
+	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
 		log.Fatal("error parsing: %s", err)
 	}
 
-	return &Config{
-		Auth:  NewAuth(&p.Auth),
-		Pipes: NewPipes(&p.Pipes),
-	}
-}
-
-// New read and parse a yaml file
-func New(file string) *Config {
-	p := Parser{}
-	return p.parse(file)
+	return &cfg
 }
