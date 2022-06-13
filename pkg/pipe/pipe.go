@@ -1,15 +1,16 @@
 package pipe
 
 import (
+	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/config"
 	"github.com/joyqi/dahuang/pkg/log"
 )
 
 type Pipe interface {
-	Serve()
+	Serve(auth auth.Auth)
 }
 
-func New(cfg *config.Config) {
+func New(cfg *config.Config, auth auth.Auth) {
 	if len(cfg.Pipes) == 0 {
 		log.Fatal("empty pipes")
 	}
@@ -26,6 +27,6 @@ func New(cfg *config.Config) {
 			}
 		}
 
-		pipe.Serve()
+		pipe.Serve(auth)
 	}
 }
