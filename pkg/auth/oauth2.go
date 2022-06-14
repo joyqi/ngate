@@ -21,6 +21,8 @@ func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) bool {
 			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 			return true
 		}
+
+		conf.Client(ctx, token)
 	}
 
 	ctx.Redirect(conf.AuthCodeURL("state", oauth2.SetAuthURLParam("app_id", oauth.Config.AppId)), fasthttp.StatusFound)
