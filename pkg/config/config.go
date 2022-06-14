@@ -16,7 +16,8 @@ type AuthConfig struct {
 	Kind string `yaml:"kind"`
 
 	// for oauth
-	AppKey         string   `yaml:"app_key"`
+	AppId          string   `yaml:"app_id"`
+	ClientId       string   `yaml:"client_id"`
 	AppSecret      string   `yaml:"app_secret"`
 	AccessTokenUrl string   `yaml:"access_token_url"`
 	AuthorizeUrl   string   `yaml:"authorize_url"`

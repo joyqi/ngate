@@ -13,18 +13,23 @@ type OAuth2 struct {
 }
 
 func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) bool {
-	if string(ctx.Host()) == oauth.Host && string(ctx.Path()) == oauth.Path {
-		ctx.SetBody([]byte("hello"))
-		return true
+	conf := oauth.config()
+
+	if string(ctx.Host()) == oauth.Host && string(ctx.Path()) == oauth.Path && ctx.QueryArgs().Has("code") {
+		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
+		if err != nil {
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+			return true
+		}
 	}
 
-	oauth.auth(ctx)
+	ctx.Redirect(conf.AuthCodeURL("state", oauth2.SetAuthURLParam("app_id", oauth.Config.AppId)), fasthttp.StatusFound)
 	return false
 }
 
-func (oauth *OAuth2) auth(ctx *fasthttp.RequestCtx) {
-	conf := &oauth2.Config{
-		ClientID:     oauth.Config.AppKey,
+func (oauth *OAuth2) config() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     oauth.Config.ClientId,
 		ClientSecret: oauth.Config.AppSecret,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  oauth.Config.AuthorizeUrl,
@@ -33,9 +38,4 @@ func (oauth *OAuth2) auth(ctx *fasthttp.RequestCtx) {
 		RedirectURL: oauth.Config.RedirectUrl,
 		Scopes:      oauth.Config.Scopes,
 	}
-
-	if ctx.QueryArgs().Has("code") {
-	}
-
-	ctx.Redirect(conf.AuthCodeURL("state", oauth2.SetAuthURLParam("app_id", oauth.Config.AppKey)), fasthttp.StatusFound)
 }
