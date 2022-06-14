@@ -2,25 +2,32 @@ package auth
 
 import (
 	"github.com/joyqi/dahuang/pkg/config"
+	"github.com/joyqi/dahuang/pkg/log"
 	"github.com/valyala/fasthttp"
+	"net/url"
 )
 
 type Auth interface {
-	Handler(ctx *fasthttp.RequestCtx)
+	Handler(ctx *fasthttp.RequestCtx) bool
 }
 
 // New parse the auth block of the config file
 func New(cfg *config.Config) Auth {
 	var a Auth
 
+	u, err := url.Parse(cfg.Auth.RedirectUrl)
+	if err != nil {
+		log.Fatal("wrong redirect url: %s", cfg.Auth.RedirectUrl)
+	}
+
 	switch cfg.Auth.Kind {
-	case "oauth":
+	case "oauth2":
+		fallthrough
 	default:
-		a = &OAuth{
-			AppKey:         cfg.Auth.AppKey,
-			AppSecret:      cfg.Auth.AppSecret,
-			AuthorizeUrl:   cfg.Auth.AuthorizeUrl,
-			AccessTokenUrl: cfg.Auth.AccessTokenUrl,
+		a = &OAuth2{
+			u.Host,
+			u.Path,
+			cfg.Auth,
 		}
 	}
 

@@ -1,13 +1,14 @@
 package pipe
 
 import (
+	"fmt"
 	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/config"
 	"github.com/joyqi/dahuang/pkg/log"
 )
 
 type Pipe interface {
-	Serve(auth auth.Auth)
+	Serve(auth auth.Auth, bc config.BackendConfig)
 }
 
 func New(cfg *config.Config, auth auth.Auth) {
@@ -20,13 +21,35 @@ func New(cfg *config.Config, auth auth.Auth) {
 
 		switch pipeConfig.Kind {
 		case "http":
+			fallthrough
 		default:
 			pipe = &Http{
-				Host: pipeConfig.Host,
-				Port: pipeConfig.Port,
+				Addr: fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
+				Cookie: HttpCookie{
+					HashKey:       []byte(pipeConfig.Cookie.HashKey),
+					BlockKey:      []byte(pipeConfig.Cookie.BlockKey),
+					ExpireSeconds: pipeConfig.Cookie.ExpireHours * 3600,
+				},
 			}
 		}
 
-		pipe.Serve(auth)
+		pipe.Serve(auth, pipeConfig.Backend)
 	}
+}
+
+type Addr struct {
+	Host string
+	Port int
+}
+
+func (a Addr) String() string {
+	if a.Host == "" {
+		a.Host = "0.0.0.0"
+	}
+
+	if a.Port <= 0 {
+		log.Fatal("wrong port number %d for %s", a.Port, a.Host)
+	}
+
+	return fmt.Sprintf("%s:%d", a.Host, a.Port)
 }
