@@ -1,17 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/config"
 	"github.com/joyqi/dahuang/pkg/pipe"
 )
 
-func main() {
-	args := NewArgs()
-	cfg := config.New(args.configFile)
-	a := auth.New(cfg)
-	pipe.New(cfg, a)
+var cfg *config.Config
 
-	fmt.Println(cfg.Pipes[0])
+func init() {
+	args := NewArgs()
+	cfg = config.New(args.configFile)
+}
+
+func main() {
+	pipe.New(cfg, auth.New(&cfg.Auth))
 }

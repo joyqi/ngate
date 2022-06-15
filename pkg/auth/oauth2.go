@@ -7,26 +7,27 @@ import (
 )
 
 type OAuth2 struct {
-	Host   string
-	Path   string
-	Config config.AuthConfig
+	BaseAuth
+	Config *config.AuthConfig
 }
 
-func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) bool {
+func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) (string, string) {
 	conf := oauth.config()
+	requestUrl := oauth.RequestUrl(ctx)
+	appId := oauth2.SetAuthURLParam("app_id", oauth.Config.AppId)
 
-	if string(ctx.Host()) == oauth.Host && string(ctx.Path()) == oauth.Path && ctx.QueryArgs().Has("code") {
-		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
+	if oauth.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
+		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")), appId)
 		if err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-			return true
+			ctx.Error(err.Error(), fasthttp.StatusForbidden)
+			return "", ""
 		}
 
-		conf.Client(ctx, token)
+		return token.AccessToken, ""
 	}
 
-	ctx.Redirect(conf.AuthCodeURL("state", oauth2.SetAuthURLParam("app_id", oauth.Config.AppId)), fasthttp.StatusFound)
-	return false
+	ctx.Redirect(conf.AuthCodeURL("state", appId), fasthttp.StatusFound)
+	return "", requestUrl
 }
 
 func (oauth *OAuth2) config() *oauth2.Config {

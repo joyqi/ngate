@@ -26,14 +26,14 @@ type AuthConfig struct {
 }
 
 type PipeConfig struct {
-	Kind    string        `yaml:"kind"`
 	Host    string        `yaml:"host"`
 	Port    int           `yaml:"port"`
-	Cookie  CookieConfig  `yaml:"cookie"`
+	Session SessionConfig `yaml:"session"`
 	Backend BackendConfig `yaml:"backend"`
 }
 
-type CookieConfig struct {
+type SessionConfig struct {
+	CookieKey   string `yaml:"cookie_key"`
 	HashKey     string `yaml:"hash_key"`
 	BlockKey    string `yaml:"block_key"`
 	ExpireHours int    `yaml:"expire_hours"`

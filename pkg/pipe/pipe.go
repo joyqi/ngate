@@ -17,23 +17,14 @@ func New(cfg *config.Config, auth auth.Auth) {
 	}
 
 	for _, pipeConfig := range cfg.Pipes {
-		var pipe Pipe
-
-		switch pipeConfig.Kind {
-		case "http":
-			fallthrough
-		default:
-			pipe = &Http{
-				Addr: fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
-				Cookie: HttpCookie{
-					HashKey:       []byte(pipeConfig.Cookie.HashKey),
-					BlockKey:      []byte(pipeConfig.Cookie.BlockKey),
-					ExpireSeconds: pipeConfig.Cookie.ExpireHours * 3600,
-				},
-			}
+		frontend := &Frontend{
+			Addr:        fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
+			BackendAddr: fmt.Sprint(Addr{pipeConfig.Backend.Host, pipeConfig.Backend.Port}),
+			Session:     NewSession(pipeConfig.Session),
+			Auth:        auth,
 		}
 
-		pipe.Serve(auth, pipeConfig.Backend)
+		frontend.Serve()
 	}
 }
 
