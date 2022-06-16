@@ -21,10 +21,18 @@ func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) st
 			return ""
 		}
 
+		state := ctx.QueryArgs().Peek("state")
+
+		if len(state) > 0 {
+			redirect(string(state))
+		} else {
+			ctx.Error("Not Found", fasthttp.StatusNotFound)
+		}
+
 		return token.AccessToken
 	}
 
-	ctx.Redirect(conf.AuthCodeURL(""), fasthttp.StatusFound)
+	redirect(conf.AuthCodeURL(oauth.RequestURL(ctx)))
 	return ""
 }
 
