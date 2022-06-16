@@ -105,9 +105,11 @@ func (store *SessionStore) Save() {
 	var c fasthttp.Cookie
 	value, err := store.Cookie.Encode(store.Config.CookieKey, &store.data)
 
-	if err == nil && store.Valid {
+	if err == nil {
 		c.SetKey(store.Config.CookieKey)
 		c.SetValue(value)
-		store.Ctx.Response.Header.Cookie(&c)
+		c.SetPath("/")
+		c.SetDomain(store.Config.CookieDomain)
+		store.Ctx.Response.Header.SetCookie(&c)
 	}
 }

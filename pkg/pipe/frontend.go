@@ -27,38 +27,28 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 	defer frontend.close(ctx, session)
 
 	if session.Get("token") != "" {
-		frontend.requestBackend(session, ctx)
+		frontend.requestBackend(ctx)
 	} else {
-		token, requestUrl := frontend.Auth.Handler(ctx)
-
-		if len(requestUrl) > 0 {
-			session.Set("referer", string(ctx.RequestURI()))
-		}
+		token := frontend.Auth.Handler(ctx)
 
 		if len(token) > 0 {
 			session.Set("token", token)
-			frontend.requestBackend(session, ctx)
 		}
 	}
 }
 
-func (frontend *Frontend) requestBackend(session *SessionStore, ctx *fasthttp.RequestCtx) {
-	if referer := session.Get("referer"); referer != "" {
-		session.Delete("referer")
-		ctx.Redirect(referer, fasthttp.StatusFound)
+func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
+	hc := &fasthttp.HostClient{
+		Addr: frontend.BackendAddr,
+	}
+
+	req := &ctx.Request
+	resp := &ctx.Response
+
+	if err := hc.Do(req, resp); err != nil {
+		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 	} else {
-		hc := &fasthttp.HostClient{
-			Addr: frontend.BackendAddr,
-		}
-
-		req := &ctx.Request
-		resp := &ctx.Response
-
-		if err := hc.Do(req, resp); err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-		} else {
-			log.Info("%s %s%s %d", req.Header.Method(), req.Host(), req.RequestURI(), resp.StatusCode())
-		}
+		log.Info("%s %s%s %d", req.Header.Method(), req.Host(), req.RequestURI(), resp.StatusCode())
 	}
 }
 

@@ -8,19 +8,21 @@ import (
 )
 
 type Auth interface {
-	Handler(ctx *fasthttp.RequestCtx) (string, string)
+	Handler(ctx *fasthttp.RequestCtx) string
 }
 
 // New parse the auth block of the config file
 func New(cfg *config.AuthConfig) Auth {
 	var a Auth
 
-	u, err := url.Parse(cfg.RedirectUrl)
+	u, err := url.Parse(cfg.RedirectURL)
 	if err != nil {
-		log.Fatal("wrong redirect url: %s", cfg.RedirectUrl)
+		log.Fatal("wrong redirect url: %s", cfg.RedirectURL)
 	}
 
 	switch cfg.Kind {
+	case "feishu":
+		a = &Feishu{BaseAuth{u}, cfg, 0, nil}
 	case "oauth2":
 		fallthrough
 	default:
@@ -31,13 +33,13 @@ func New(cfg *config.AuthConfig) Auth {
 }
 
 type BaseAuth struct {
-	BaseUrl *url.URL
+	BaseURL *url.URL
 }
 
-func (a *BaseAuth) RequestUrl(ctx *fasthttp.RequestCtx) string {
-	return a.BaseUrl.Scheme + "//" + string(ctx.Host()) + string(ctx.RequestURI())
+func (a *BaseAuth) RequestURL(ctx *fasthttp.RequestCtx) string {
+	return a.BaseURL.Scheme + "//" + string(ctx.Host()) + string(ctx.RequestURI())
 }
 
 func (a *BaseAuth) IsCallback(ctx *fasthttp.RequestCtx) bool {
-	return string(ctx.Host()) == a.BaseUrl.Host && string(ctx.Path()) == a.BaseUrl.Path
+	return string(ctx.Host()) == a.BaseURL.Host && string(ctx.Path()) == a.BaseURL.Path
 }

@@ -11,23 +11,21 @@ type OAuth2 struct {
 	Config *config.AuthConfig
 }
 
-func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) (string, string) {
+func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) string {
 	conf := oauth.config()
-	requestUrl := oauth.RequestUrl(ctx)
-	appId := oauth2.SetAuthURLParam("app_id", oauth.Config.AppId)
 
 	if oauth.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
-		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")), appId)
+		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
 		if err != nil {
 			ctx.Error(err.Error(), fasthttp.StatusForbidden)
-			return "", ""
+			return ""
 		}
 
-		return token.AccessToken, ""
+		return token.AccessToken
 	}
 
-	ctx.Redirect(conf.AuthCodeURL("state", appId), fasthttp.StatusFound)
-	return "", requestUrl
+	ctx.Redirect(conf.AuthCodeURL(""), fasthttp.StatusFound)
+	return ""
 }
 
 func (oauth *OAuth2) config() *oauth2.Config {
@@ -35,10 +33,10 @@ func (oauth *OAuth2) config() *oauth2.Config {
 		ClientID:     oauth.Config.ClientId,
 		ClientSecret: oauth.Config.AppSecret,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  oauth.Config.AuthorizeUrl,
-			TokenURL: oauth.Config.AccessTokenUrl,
+			AuthURL:  oauth.Config.AuthorizeURL,
+			TokenURL: oauth.Config.AccessTokenURL,
 		},
-		RedirectURL: oauth.Config.RedirectUrl,
+		RedirectURL: oauth.Config.RedirectURL,
 		Scopes:      oauth.Config.Scopes,
 	}
 }

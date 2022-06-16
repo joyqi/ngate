@@ -19,9 +19,9 @@ type AuthConfig struct {
 	AppId          string   `yaml:"app_id"`
 	ClientId       string   `yaml:"client_id"`
 	AppSecret      string   `yaml:"app_secret"`
-	AccessTokenUrl string   `yaml:"access_token_url"`
-	AuthorizeUrl   string   `yaml:"authorize_url"`
-	RedirectUrl    string   `yaml:"redirect_url"`
+	AccessTokenURL string   `yaml:"access_token_url"`
+	AuthorizeURL   string   `yaml:"authorize_url"`
+	RedirectURL    string   `yaml:"redirect_url"`
 	Scopes         []string `yaml:"scopes,flow"`
 }
 
@@ -33,10 +33,11 @@ type PipeConfig struct {
 }
 
 type SessionConfig struct {
-	CookieKey   string `yaml:"cookie_key"`
-	HashKey     string `yaml:"hash_key"`
-	BlockKey    string `yaml:"block_key"`
-	ExpireHours int    `yaml:"expire_hours"`
+	CookieKey    string `yaml:"cookie_key"`
+	CookieDomain string `yaml:"cookie_domain"`
+	HashKey      string `yaml:"hash_key"`
+	BlockKey     string `yaml:"block_key"`
+	ExpireHours  int    `yaml:"expire_hours"`
 }
 
 type BackendConfig struct {
