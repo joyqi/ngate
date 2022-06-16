@@ -1,6 +1,7 @@
 package pipe
 
 import (
+	"encoding/json"
 	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/log"
 	"github.com/valyala/fasthttp"
@@ -21,6 +22,21 @@ func (frontend *Frontend) Serve() {
 	}
 }
 
+func (frontend *Frontend) SoftRedirect(ctx *fasthttp.RequestCtx) auth.SoftRedirect {
+	return func(url string) {
+		u, err := json.Marshal(url)
+		if err != nil {
+			ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
+			return
+		}
+
+		ctx.SetContentType("text/html")
+		if _, err = ctx.WriteString("<script>window.location.href=" + string(u) + "</script>"); err != nil {
+			ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
+		}
+	}
+}
+
 func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 	session := frontend.Session.Store(ctx)
 
@@ -29,7 +45,7 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 	if session.Get("token") != "" {
 		frontend.requestBackend(ctx)
 	} else {
-		token := frontend.Auth.Handler(ctx)
+		token := frontend.Auth.Handler(ctx, frontend.SoftRedirect(ctx))
 
 		if len(token) > 0 {
 			session.Set("token", token)

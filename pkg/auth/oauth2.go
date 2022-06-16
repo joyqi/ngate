@@ -11,7 +11,7 @@ type OAuth2 struct {
 	Config *config.AuthConfig
 }
 
-func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx) string {
+func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string {
 	conf := oauth.config()
 
 	if oauth.IsCallback(ctx) && ctx.QueryArgs().Has("code") {

@@ -44,7 +44,7 @@ type FeishuAccessToken struct {
 	} `json:"data"`
 }
 
-func (f *Feishu) Handler(ctx *fasthttp.RequestCtx) string {
+func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string {
 	if f.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
 		if now := time.Now().Unix(); now > f.TenantTokenExpireAt {
 			tenantToken := f.retrieveTenantToken()
@@ -66,7 +66,7 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx) string {
 				state := ctx.QueryArgs().Peek("state")
 
 				if len(state) > 0 {
-					ctx.Redirect(string(state), fasthttp.StatusFound)
+					redirect(string(state))
 				} else {
 					ctx.Error("Not Found", fasthttp.StatusNotFound)
 				}
@@ -80,7 +80,7 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx) string {
 		return ""
 	}
 
-	ctx.Redirect(f.authCodeURL(f.RequestURL(ctx)), fasthttp.StatusFound)
+	redirect(f.authCodeURL(f.RequestURL(ctx)))
 	return ""
 }
 

@@ -7,8 +7,10 @@ import (
 	"net/url"
 )
 
+type SoftRedirect func(url string)
+
 type Auth interface {
-	Handler(ctx *fasthttp.RequestCtx) string
+	Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string
 }
 
 // New parse the auth block of the config file
@@ -37,7 +39,7 @@ type BaseAuth struct {
 }
 
 func (a *BaseAuth) RequestURL(ctx *fasthttp.RequestCtx) string {
-	return a.BaseURL.Scheme + "//" + string(ctx.Host()) + string(ctx.RequestURI())
+	return a.BaseURL.Scheme + "://" + string(ctx.Host()) + string(ctx.RequestURI())
 }
 
 func (a *BaseAuth) IsCallback(ctx *fasthttp.RequestCtx) bool {
