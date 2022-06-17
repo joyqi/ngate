@@ -13,16 +13,21 @@ import (
 
 // Endpoint is feishu's endpoint url
 const (
-	FeishuAuthURL   = "https://open.feishu.cn/open-apis/authen/v1/index"
-	FeishuTokenURL  = "https://open.feishu.cn/open-apis/authen/v1/access_token"
-	FeishuTenantURL = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+	FeishuAuthURL         = "https://open.feishu.cn/open-apis/authen/v1/index"
+	FeishuTokenURL        = "https://open.feishu.cn/open-apis/authen/v1/access_token"
+	FeishuRefreshTokenURL = "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token"
+	FeishuTenantTokenURL  = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+)
+
+// feishu tenant token
+var (
+	tenantTokenExpireAt int64
+	tenantToken         *FeishuTenantToken
 )
 
 type Feishu struct {
 	BaseAuth
-	Config              *config.AuthConfig
-	TenantTokenExpireAt int64
-	TenantToken         *FeishuTenantToken
+	Config *config.AuthConfig
 }
 
 type FeishuTenantToken struct {
@@ -36,30 +41,29 @@ type FeishuAccessToken struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
-		AccessToken string `json:"access_token"`
-		Name        string `json:"name"`
-		EnName      string `json:"en_name"`
-		OpenId      string `json:"open_id"`
-		ExpiresIn   int64  `json:"expires_in"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		Name         string `json:"name"`
+		EnName       string `json:"en_name"`
+		OpenId       string `json:"open_id"`
+		ExpiresIn    int64  `json:"expires_in"`
 	} `json:"data"`
 }
 
-func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string {
+func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
 	if f.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
-		if now := time.Now().Unix(); now > f.TenantTokenExpireAt {
+		if now := time.Now().Unix(); now > tenantTokenExpireAt {
 			tenantToken := f.retrieveTenantToken()
 
 			if tenantToken != nil {
-				f.TenantToken = tenantToken
-				f.TenantTokenExpireAt = now + tenantToken.Expire
-
+				tenantTokenExpireAt = now + tenantToken.Expire
 				log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
 			}
 		}
 
 		var accessToken *FeishuAccessToken
 
-		if f.TenantToken != nil {
+		if tenantToken != nil {
 			accessToken = f.retrieveToken(string(ctx.QueryArgs().Peek("code")))
 
 			if accessToken != nil {
@@ -71,17 +75,22 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string
 					ctx.Error("Not Found", fasthttp.StatusNotFound)
 				}
 
-				return accessToken.Data.AccessToken
+				session.Set("access_token", accessToken.Data.AccessToken)
+				session.Set("refresh_token", accessToken.Data.RefreshToken)
+				session.SetInt("expires_at", time.Now().Unix())
 			} else {
 				ctx.Error("Error Access Token", fasthttp.StatusForbidden)
 			}
+		} else {
+			ctx.Error("Error Tenant Token", fasthttp.StatusInternalServerError)
 		}
-
-		return ""
+	} else {
+		redirect(f.authCodeURL(f.RequestURL(ctx)))
 	}
+}
 
-	redirect(f.authCodeURL(f.RequestURL(ctx)))
-	return ""
+func (f *Feishu) Valid(session Session) bool {
+	return session.Get("access_token") != ""
 }
 
 func (f *Feishu) retrieveTenantToken() *FeishuTenantToken {
@@ -90,7 +99,7 @@ func (f *Feishu) retrieveTenantToken() *FeishuTenantToken {
 		"app_secret": f.Config.AppSecret,
 	}
 
-	body, err := f.postURL(FeishuTenantURL, data, "")
+	body, err := f.postURL(FeishuTenantTokenURL, data, "")
 	if err != nil {
 		return nil
 	}
@@ -110,7 +119,27 @@ func (f *Feishu) retrieveToken(code string) *FeishuAccessToken {
 		"code":       code,
 	}
 
-	body, err := f.postURL(FeishuTokenURL, data, f.TenantToken.TenantAccessToken)
+	body, err := f.postURL(FeishuTokenURL, data, tenantToken.TenantAccessToken)
+	if err != nil {
+		return nil
+	}
+
+	token := FeishuAccessToken{}
+	err = json.Unmarshal(body, &token)
+	if err != nil {
+		return nil
+	}
+
+	return &token
+}
+
+func (f *Feishu) retrieveRefreshToken(refreshToken string) *FeishuAccessToken {
+	data := map[string]string{
+		"grant_type":    "refresh_token",
+		"refresh_token": refreshToken,
+	}
+
+	body, err := f.postURL(FeishuRefreshTokenURL, data, tenantToken.TenantAccessToken)
 	if err != nil {
 		return nil
 	}

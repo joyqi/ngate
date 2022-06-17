@@ -9,8 +9,16 @@ import (
 
 type SoftRedirect func(url string)
 
+type Session interface {
+	Set(key string, value string)
+	SetInt(key string, value int64)
+	Get(key string) string
+	GetInt(key string) int64
+}
+
 type Auth interface {
-	Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string
+	Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect)
+	Valid(session Session) bool
 }
 
 // New parse the auth block of the config file
@@ -24,7 +32,7 @@ func New(cfg *config.AuthConfig) Auth {
 
 	switch cfg.Kind {
 	case "feishu":
-		a = &Feishu{BaseAuth{u}, cfg, 0, nil}
+		a = &Feishu{BaseAuth{u}, cfg}
 	case "oauth2":
 		fallthrough
 	default:

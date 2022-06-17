@@ -7,7 +7,6 @@ import (
 	"github.com/joyqi/dahuang/pkg/log"
 	"github.com/valyala/fasthttp"
 	"strconv"
-	"time"
 )
 
 type Session struct {
@@ -35,7 +34,7 @@ func (session *Session) Store(ctx *fasthttp.RequestCtx) *SessionStore {
 		Cookie: session.Cookie,
 		Ctx:    ctx,
 		Config: session.Config,
-		Valid:  false,
+		Stored: false,
 	}
 
 	store.Init()
@@ -46,7 +45,7 @@ type SessionStore struct {
 	Cookie *securecookie.SecureCookie
 	Ctx    *fasthttp.RequestCtx
 	Config *config.SessionConfig
-	Valid  bool
+	Stored bool
 	data   map[string]string
 }
 
@@ -55,18 +54,16 @@ func (store *SessionStore) Init() {
 	cookie := store.Ctx.Request.Header.Cookie(store.Config.CookieKey)
 	store.data = make(map[string]string)
 
-	if err := store.Cookie.Decode(store.Config.CookieKey, string(cookie), &store.data); err == nil {
-		now := time.Now().Unix()
-		lastTime := store.GetInt("time")
-
-		if lastTime == 0 || int64(lastTime+store.Config.ExpireHours*3600) >= now {
-			store.Valid = true
+	if len(cookie) > 0 {
+		if err := store.Cookie.Decode(store.Config.CookieKey, string(cookie), &store.data); err != nil {
+			log.Warning("wrong cookie: %s", err)
 		}
 	}
 }
 
 func (store *SessionStore) Set(key string, value string) {
 	store.data[key] = value
+	store.Stored = true
 }
 
 func (store *SessionStore) SetInt(key string, value int64) {
@@ -85,10 +82,10 @@ func (store *SessionStore) Get(key string) string {
 }
 
 // GetInt int value from session store
-func (store *SessionStore) GetInt(key string) int {
+func (store *SessionStore) GetInt(key string) int64 {
 	value := store.Get(key)
 
-	if i, err := strconv.Atoi(value); err == nil {
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
 		return i
 	}
 
@@ -97,10 +94,13 @@ func (store *SessionStore) GetInt(key string) int {
 
 func (store *SessionStore) Delete(key string) {
 	delete(store.data, key)
+	store.Stored = true
 }
 
 func (store *SessionStore) Save() {
-	store.SetInt("time", time.Now().Unix()+int64(store.Config.ExpireHours*3600))
+	if !store.Stored {
+		return
+	}
 
 	var c fasthttp.Cookie
 	value, err := store.Cookie.Encode(store.Config.CookieKey, &store.data)

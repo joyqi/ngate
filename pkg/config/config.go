@@ -4,7 +4,6 @@ import (
 	"github.com/joyqi/dahuang/pkg/log"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
-	"time"
 )
 
 type Config struct {
@@ -37,13 +36,13 @@ type SessionConfig struct {
 	CookieDomain string `yaml:"cookie_domain"`
 	HashKey      string `yaml:"hash_key"`
 	BlockKey     string `yaml:"block_key"`
-	ExpireHours  int    `yaml:"expire_hours"`
+	ExpiresIn    int64  `yaml:"expires_in"`
 }
 
 type BackendConfig struct {
-	Host    string        `yaml:"host"`
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+	Host    string `yaml:"host"`
+	Port    int    `yaml:"port"`
+	Timeout int64  `yaml:"timeout"`
 }
 
 // New read and parse a yaml file

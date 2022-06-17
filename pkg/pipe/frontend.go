@@ -5,13 +5,15 @@ import (
 	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/log"
 	"github.com/valyala/fasthttp"
+	"time"
 )
 
 type Frontend struct {
-	Addr        string
-	BackendAddr string
-	Auth        auth.Auth
-	Session     *Session
+	Addr           string
+	BackendAddr    string
+	BackendTimeout time.Duration
+	Auth           auth.Auth
+	Session        *Session
 }
 
 func (frontend *Frontend) Serve() {
@@ -22,6 +24,7 @@ func (frontend *Frontend) Serve() {
 	}
 }
 
+// SoftRedirect perform a redirect handle by javascript code
 func (frontend *Frontend) SoftRedirect(ctx *fasthttp.RequestCtx) auth.SoftRedirect {
 	return func(url string) {
 		u, err := json.Marshal(url)
@@ -42,20 +45,18 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 
 	defer frontend.close(ctx, session)
 
-	if session.Get("token") != "" {
+	if frontend.Auth.Valid(session) {
 		frontend.requestBackend(ctx)
 	} else {
-		token := frontend.Auth.Handler(ctx, frontend.SoftRedirect(ctx))
-
-		if len(token) > 0 {
-			session.Set("token", token)
-		}
+		frontend.Auth.Handler(ctx, session, frontend.SoftRedirect(ctx))
 	}
 }
 
 func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	hc := &fasthttp.HostClient{
-		Addr: frontend.BackendAddr,
+		Addr:         frontend.BackendAddr,
+		WriteTimeout: frontend.BackendTimeout,
+		ReadTimeout:  frontend.BackendTimeout,
 	}
 
 	req := &ctx.Request

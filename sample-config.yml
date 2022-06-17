@@ -1,17 +1,17 @@
 auth:
-  kind: "oauth"
-  app_key: "1213123"
-  app_secret: "12313"
-  access_token_url: "https://"
-  authorize_url: "https://"
+  kind: "feishu"
+  redirect_url: "https://example.com/oauth_callback"
+  app_id: "cli_xxxxxxx"
+  app_secret: "xxxxxxxx"
 pipes:
-  - port: 9000
-    backends:
-      - hostname: "backyard-git.segmentfault.com"
-        remote_addr: "192.168.2"
-        remote_port: 8080
-      - hostname: "backyard-stats.segmentfault.com"
-        kind: "frp"
-        local_addr: "0.0.0.0"
-        local_port: 8888
-        secret: "xasfasdf"
+  - port: 8070
+    session:
+      cookie_key: "__test__"
+      cookie_domain: ".example.com"
+      expires_in: 3600
+      hash_key: "12345612345678901234561234567890"
+      block_key: "1234561234567890"
+    backend:
+      host: "127.0.0.1"
+      port: 8000
+      timeout: 5000

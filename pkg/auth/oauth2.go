@@ -11,29 +11,31 @@ type OAuth2 struct {
 	Config *config.AuthConfig
 }
 
-func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, redirect SoftRedirect) string {
+func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
 	conf := oauth.config()
 
 	if oauth.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
 		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
 		if err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusForbidden)
-			return ""
-		}
-
-		state := ctx.QueryArgs().Peek("state")
-
-		if len(state) > 0 {
-			redirect(string(state))
+			ctx.Error("Error Access Token", fasthttp.StatusForbidden)
 		} else {
-			ctx.Error("Not Found", fasthttp.StatusNotFound)
+			state := ctx.QueryArgs().Peek("state")
+
+			if len(state) > 0 {
+				redirect(string(state))
+			} else {
+				ctx.Error("Not Found", fasthttp.StatusNotFound)
+			}
+
+			session.Set("access_token", token.AccessToken)
 		}
-
-		return token.AccessToken
+	} else {
+		redirect(conf.AuthCodeURL(oauth.RequestURL(ctx)))
 	}
+}
 
-	redirect(conf.AuthCodeURL(oauth.RequestURL(ctx)))
-	return ""
+func (oauth *OAuth2) Valid(session Session) bool {
+	return session.Get("access_token") != ""
 }
 
 func (oauth *OAuth2) config() *oauth2.Config {
