@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/joyqi/ngate/internal/config"
 	"github.com/joyqi/ngate/pkg/auth"
+	"sync"
 )
 
 type Pipe interface {
@@ -14,6 +15,9 @@ func New(cfg *config.Config, auth auth.Auth) error {
 	if len(cfg.Pipes) == 0 {
 		return fmt.Errorf("empty pipes")
 	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(cfg.Pipes))
 
 	for _, pipeConfig := range cfg.Pipes {
 		session, err := NewSession(pipeConfig.Session)
@@ -27,14 +31,13 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			BackendTimeout: pipeConfig.Backend.Timeout,
 			Session:        session,
 			Auth:           auth,
+			Wait:           wg,
 		}
 
-		err = frontend.Serve()
-		if err != nil {
-			return err
-		}
+		go frontend.Serve()
 	}
 
+	wg.Wait()
 	return nil
 }
 

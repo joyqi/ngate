@@ -2,10 +2,10 @@ package pipe
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/joyqi/ngate/internal/log"
 	"github.com/joyqi/ngate/pkg/auth"
 	"github.com/valyala/fasthttp"
+	"sync"
 	"time"
 )
 
@@ -15,16 +15,15 @@ type Frontend struct {
 	BackendTimeout int64
 	Auth           auth.Auth
 	Session        *Session
+	Wait           *sync.WaitGroup
 }
 
-func (frontend *Frontend) Serve() error {
+func (frontend *Frontend) Serve() {
 	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendAddr)
 
 	if err := fasthttp.ListenAndServe(frontend.Addr, frontend.handler); err != nil {
-		return fmt.Errorf("http server error: %s", err)
+		log.Error("http server error: %s", err)
 	}
-
-	return nil
 }
 
 // SoftRedirect perform a redirect handle by javascript code

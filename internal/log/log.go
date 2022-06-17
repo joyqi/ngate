@@ -47,6 +47,11 @@ func Warning(format string, v ...any) {
 	getLogger(WarningLog).Println(YELLOW + fmt.Sprintf(format, v...) + RESET)
 }
 
+// Error prints a fatal message in the red color and then panic
+func Error(format string, v ...any) {
+	getLogger(FatalLog).Println(RED + fmt.Sprintf(format, v...) + RESET)
+}
+
 // Fatal prints a fatal message in the red color and then panic
 func Fatal(format string, v ...any) {
 	getLogger(FatalLog).Fatal(RED + fmt.Sprintf(format, v...) + RESET)
