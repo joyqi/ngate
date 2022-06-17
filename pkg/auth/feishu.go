@@ -8,6 +8,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,7 @@ var (
 	tenantTokenExpireAt int64
 	tenantToken         *FeishuTenantToken
 )
+var refreshLock sync.Map
 
 type Feishu struct {
 	BaseAuth
@@ -53,9 +55,9 @@ type FeishuAccessToken struct {
 func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
 	if f.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
 		if now := time.Now().Unix(); now > tenantTokenExpireAt {
-			tenantToken := f.retrieveTenantToken()
+			tenantToken = f.retrieveTenantToken()
 
-			if tenantToken != nil {
+			if tenantToken != nil && tenantToken.Code == 0 {
 				tenantTokenExpireAt = now + tenantToken.Expire
 				log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
 			}
@@ -66,7 +68,7 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Sof
 		if tenantToken != nil {
 			accessToken = f.retrieveToken(string(ctx.QueryArgs().Peek("code")))
 
-			if accessToken != nil {
+			if accessToken != nil && accessToken.Code == 0 {
 				state := ctx.QueryArgs().Peek("state")
 
 				if len(state) > 0 {
@@ -77,7 +79,7 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Sof
 
 				session.Set("access_token", accessToken.Data.AccessToken)
 				session.Set("refresh_token", accessToken.Data.RefreshToken)
-				session.SetInt("expires_at", time.Now().Unix())
+				session.SetInt("valid_at", time.Now().Unix())
 			} else {
 				ctx.Error("Error Access Token", fasthttp.StatusForbidden)
 			}
@@ -90,7 +92,26 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Sof
 }
 
 func (f *Feishu) Valid(session Session) bool {
-	return session.Get("access_token") != ""
+	if accessToken := session.Get("access_token"); accessToken != "" {
+		if session.Expired(session.GetInt("valid_at")) {
+			if _, exists := refreshLock.LoadOrStore(accessToken, 1); !exists {
+				refreshToken := f.retrieveRefreshToken(session.Get("refresh_token"))
+
+				if refreshToken != nil && refreshToken.Code == 0 {
+					session.Set("access_token", refreshToken.Data.AccessToken)
+					session.Set("refresh_token", refreshToken.Data.RefreshToken)
+					session.SetInt("valid_at", time.Now().Unix())
+				}
+
+				refreshLock.Delete(accessToken)
+				return true
+			}
+		} else {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (f *Feishu) retrieveTenantToken() *FeishuTenantToken {

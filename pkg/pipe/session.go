@@ -7,6 +7,7 @@ import (
 	"github.com/joyqi/dahuang/pkg/log"
 	"github.com/valyala/fasthttp"
 	"strconv"
+	"time"
 )
 
 type Session struct {
@@ -90,6 +91,10 @@ func (store *SessionStore) GetInt(key string) int64 {
 	}
 
 	return 0
+}
+
+func (store *SessionStore) Expired(last int64) bool {
+	return time.Now().Unix() > last+store.Config.ExpiresIn
 }
 
 func (store *SessionStore) Delete(key string) {

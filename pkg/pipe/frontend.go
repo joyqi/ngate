@@ -11,7 +11,7 @@ import (
 type Frontend struct {
 	Addr           string
 	BackendAddr    string
-	BackendTimeout time.Duration
+	BackendTimeout int64
 	Auth           auth.Auth
 	Session        *Session
 }
@@ -54,15 +54,13 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 
 func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	hc := &fasthttp.HostClient{
-		Addr:         frontend.BackendAddr,
-		WriteTimeout: frontend.BackendTimeout,
-		ReadTimeout:  frontend.BackendTimeout,
+		Addr: frontend.BackendAddr,
 	}
 
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	if err := hc.Do(req, resp); err != nil {
+	if err := hc.DoTimeout(req, resp, time.Duration(frontend.BackendTimeout)*time.Millisecond); err != nil {
 		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 	} else {
 		log.Info("%s %s%s %d", req.Header.Method(), req.Host(), req.RequestURI(), resp.StatusCode())

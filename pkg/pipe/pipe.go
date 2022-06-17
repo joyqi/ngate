@@ -5,7 +5,6 @@ import (
 	"github.com/joyqi/dahuang/pkg/auth"
 	"github.com/joyqi/dahuang/pkg/config"
 	"github.com/joyqi/dahuang/pkg/log"
-	"time"
 )
 
 type Pipe interface {
@@ -21,7 +20,7 @@ func New(cfg *config.Config, auth auth.Auth) {
 		frontend := &Frontend{
 			Addr:           fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
 			BackendAddr:    fmt.Sprint(Addr{pipeConfig.Backend.Host, pipeConfig.Backend.Port}),
-			BackendTimeout: time.Duration(pipeConfig.Backend.Timeout),
+			BackendTimeout: pipeConfig.Backend.Timeout,
 			Session:        NewSession(pipeConfig.Session),
 			Auth:           auth,
 		}
