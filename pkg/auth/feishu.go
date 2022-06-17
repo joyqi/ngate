@@ -173,7 +173,6 @@ func (f *Feishu) retrieveRefreshToken(refreshToken string) *FeishuAccessToken {
 	}
 
 	body, err := f.postURL(FeishuRefreshTokenURL, data, tenantToken.TenantAccessToken)
-	log.Info("refresh token %s", body)
 	if err != nil {
 		return nil
 	}
