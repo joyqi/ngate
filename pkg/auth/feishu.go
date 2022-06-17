@@ -96,15 +96,21 @@ func (f *Feishu) Valid(session Session) bool {
 		if session.Expired(session.GetInt("valid_at")) {
 			if _, exists := refreshLock.LoadOrStore(accessToken, 1); !exists {
 				refreshToken := f.retrieveRefreshToken(session.Get("refresh_token"))
+				valid := false
 
 				if refreshToken != nil && refreshToken.Code == 0 {
 					session.Set("access_token", refreshToken.Data.AccessToken)
 					session.Set("refresh_token", refreshToken.Data.RefreshToken)
 					session.SetInt("valid_at", time.Now().Unix())
+					valid = true
+				} else {
+					session.Delete("access_token")
+					session.Delete("refresh_token")
+					session.Delete("valid_at")
 				}
 
 				refreshLock.Delete(accessToken)
-				return true
+				return valid
 			}
 		} else {
 			return true

@@ -14,6 +14,7 @@ type Session interface {
 	SetInt(key string, value int64)
 	Get(key string) string
 	GetInt(key string) int64
+	Delete(key string)
 	Expired(last int64) bool
 }
 
