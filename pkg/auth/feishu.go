@@ -54,37 +54,22 @@ type FeishuAccessToken struct {
 
 func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
 	if f.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
-		if now := time.Now().Unix(); now > tenantTokenExpireAt {
-			tenantToken = f.retrieveTenantToken()
+		accessToken := f.retrieveToken(string(ctx.QueryArgs().Peek("code")))
 
-			if tenantToken != nil && tenantToken.Code == 0 {
-				tenantTokenExpireAt = now + tenantToken.Expire
-				log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
-			}
-		}
+		if accessToken != nil && accessToken.Code == 0 {
+			state := ctx.QueryArgs().Peek("state")
 
-		var accessToken *FeishuAccessToken
-
-		if tenantToken != nil {
-			accessToken = f.retrieveToken(string(ctx.QueryArgs().Peek("code")))
-
-			if accessToken != nil && accessToken.Code == 0 {
-				state := ctx.QueryArgs().Peek("state")
-
-				if len(state) > 0 {
-					redirect(string(state))
-				} else {
-					ctx.Error("Not Found", fasthttp.StatusNotFound)
-				}
-
-				session.Set("access_token", accessToken.Data.AccessToken)
-				session.Set("refresh_token", accessToken.Data.RefreshToken)
-				session.SetInt("valid_at", time.Now().Unix())
+			if len(state) > 0 {
+				redirect(string(state))
 			} else {
-				ctx.Error("Error Access Token", fasthttp.StatusForbidden)
+				ctx.Error("Not Found", fasthttp.StatusNotFound)
 			}
+
+			session.Set("access_token", accessToken.Data.AccessToken)
+			session.Set("refresh_token", accessToken.Data.RefreshToken)
+			session.SetInt("valid_at", time.Now().Unix())
 		} else {
-			ctx.Error("Error Tenant Token", fasthttp.StatusInternalServerError)
+			ctx.Error("Error Access Token", fasthttp.StatusForbidden)
 		}
 	} else {
 		redirect(f.authCodeURL(f.RequestURL(ctx)))
@@ -120,6 +105,17 @@ func (f *Feishu) Valid(session Session) bool {
 	return false
 }
 
+func (f Feishu) requestTenantToken() {
+	if now := time.Now().Unix(); now > tenantTokenExpireAt {
+		tenantToken = f.retrieveTenantToken()
+
+		if tenantToken != nil && tenantToken.Code == 0 {
+			tenantTokenExpireAt = now + tenantToken.Expire
+			log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
+		}
+	}
+}
+
 func (f *Feishu) retrieveTenantToken() *FeishuTenantToken {
 	data := map[string]string{
 		"app_id":     f.Config.AppId,
@@ -141,6 +137,11 @@ func (f *Feishu) retrieveTenantToken() *FeishuTenantToken {
 }
 
 func (f *Feishu) retrieveToken(code string) *FeishuAccessToken {
+	f.requestTenantToken()
+	if tenantToken == nil {
+		return nil
+	}
+
 	data := map[string]string{
 		"grant_type": "authorization_code",
 		"code":       code,
@@ -161,12 +162,18 @@ func (f *Feishu) retrieveToken(code string) *FeishuAccessToken {
 }
 
 func (f *Feishu) retrieveRefreshToken(refreshToken string) *FeishuAccessToken {
+	f.requestTenantToken()
+	if tenantToken == nil {
+		return nil
+	}
+
 	data := map[string]string{
 		"grant_type":    "refresh_token",
 		"refresh_token": refreshToken,
 	}
 
 	body, err := f.postURL(FeishuRefreshTokenURL, data, tenantToken.TenantAccessToken)
+	log.Info("refresh token %s", body)
 	if err != nil {
 		return nil
 	}
