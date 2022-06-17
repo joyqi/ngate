@@ -3,8 +3,8 @@ package pipe
 import (
 	"fmt"
 	"github.com/gorilla/securecookie"
-	"github.com/joyqi/dahuang/internal/config"
-	"github.com/joyqi/dahuang/internal/log"
+	"github.com/joyqi/ngate/internal/config"
+	"github.com/joyqi/ngate/internal/log"
 	"github.com/valyala/fasthttp"
 	"strconv"
 	"time"

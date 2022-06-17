@@ -1,4 +1,4 @@
-module github.com/joyqi/dahuang
+module github.com/joyqi/ngate
 
 go 1.18
 

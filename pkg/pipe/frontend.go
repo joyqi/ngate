@@ -2,8 +2,8 @@ package pipe
 
 import (
 	"encoding/json"
-	"github.com/joyqi/dahuang/internal/log"
-	"github.com/joyqi/dahuang/pkg/auth"
+	"github.com/joyqi/ngate/internal/log"
+	"github.com/joyqi/ngate/pkg/auth"
 	"github.com/valyala/fasthttp"
 	"time"
 )

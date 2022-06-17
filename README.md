@@ -1,4 +1,4 @@
-# dahuang(大黄)
+# ngate
 
 An authentication-based open-source http gateway to protect private resources
 

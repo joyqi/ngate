@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/joyqi/dahuang/internal/config"
-	"github.com/joyqi/dahuang/pkg/auth"
-	"github.com/joyqi/dahuang/pkg/pipe"
+	"github.com/joyqi/ngate/internal/config"
+	"github.com/joyqi/ngate/pkg/auth"
+	"github.com/joyqi/ngate/pkg/pipe"
 )
 
 var cfg *config.Config

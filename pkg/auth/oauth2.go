@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/joyqi/dahuang/internal/config"
+	"github.com/joyqi/ngate/internal/config"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/oauth2"
 )
