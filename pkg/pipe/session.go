@@ -15,19 +15,19 @@ type Session struct {
 	Config *config.SessionConfig
 }
 
-func NewSession(cfg config.SessionConfig) *Session {
+func NewSession(cfg config.SessionConfig) (*Session, error) {
 	if hashKeyLen := len(cfg.HashKey); hashKeyLen < 32 {
-		log.Fatal("hash keys should be at least 32 bytes long")
+		return nil, fmt.Errorf("hash keys should be at least 32 bytes long")
 	}
 
 	if blockKeyLen := len(cfg.BlockKey); blockKeyLen != 16 && blockKeyLen != 32 {
-		log.Fatal("block keys should be 16 bytes (AES-128) or 32 bytes (AES-256) long")
+		return nil, fmt.Errorf("block keys should be 16 bytes (AES-128) or 32 bytes (AES-256) long")
 	}
 
 	return &Session{
 		Cookie: securecookie.New([]byte(cfg.HashKey), []byte(cfg.BlockKey)),
 		Config: &cfg,
-	}
+	}, nil
 }
 
 func (session *Session) Store(ctx *fasthttp.RequestCtx) *SessionStore {

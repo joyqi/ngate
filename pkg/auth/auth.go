@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"fmt"
 	"github.com/joyqi/ngate/internal/config"
-	"github.com/joyqi/ngate/internal/log"
 	"github.com/valyala/fasthttp"
 	"net/url"
 )
@@ -24,12 +24,12 @@ type Auth interface {
 }
 
 // New parse the auth block of the config file
-func New(cfg *config.AuthConfig) Auth {
+func New(cfg *config.AuthConfig) (Auth, error) {
 	var a Auth
 
 	u, err := url.Parse(cfg.RedirectURL)
 	if err != nil {
-		log.Fatal("wrong redirect url: %s", cfg.RedirectURL)
+		return nil, fmt.Errorf("wrong redirect url: %s", cfg.RedirectURL)
 	}
 
 	switch cfg.Kind {
@@ -41,7 +41,7 @@ func New(cfg *config.AuthConfig) Auth {
 		a = &OAuth2{BaseAuth{u}, cfg}
 	}
 
-	return a
+	return a, nil
 }
 
 type BaseAuth struct {

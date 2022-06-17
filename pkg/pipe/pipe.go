@@ -3,7 +3,6 @@ package pipe
 import (
 	"fmt"
 	"github.com/joyqi/ngate/internal/config"
-	"github.com/joyqi/ngate/internal/log"
 	"github.com/joyqi/ngate/pkg/auth"
 )
 
@@ -11,22 +10,32 @@ type Pipe interface {
 	Serve(auth auth.Auth, bc config.BackendConfig)
 }
 
-func New(cfg *config.Config, auth auth.Auth) {
+func New(cfg *config.Config, auth auth.Auth) error {
 	if len(cfg.Pipes) == 0 {
-		log.Fatal("empty pipes")
+		return fmt.Errorf("empty pipes")
 	}
 
 	for _, pipeConfig := range cfg.Pipes {
+		session, err := NewSession(pipeConfig.Session)
+		if err != nil {
+			return err
+		}
+
 		frontend := &Frontend{
 			Addr:           fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
 			BackendAddr:    fmt.Sprint(Addr{pipeConfig.Backend.Host, pipeConfig.Backend.Port}),
 			BackendTimeout: pipeConfig.Backend.Timeout,
-			Session:        NewSession(pipeConfig.Session),
+			Session:        session,
 			Auth:           auth,
 		}
 
-		frontend.Serve()
+		err = frontend.Serve()
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 type Addr struct {
@@ -37,10 +46,6 @@ type Addr struct {
 func (a Addr) String() string {
 	if a.Host == "" {
 		a.Host = "0.0.0.0"
-	}
-
-	if a.Port <= 0 {
-		log.Fatal("wrong port number %d for %s", a.Port, a.Host)
 	}
 
 	return fmt.Sprintf("%s:%d", a.Host, a.Port)

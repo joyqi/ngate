@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/joyqi/ngate/internal/log"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
@@ -46,16 +45,16 @@ type BackendConfig struct {
 }
 
 // New read and parse a yaml file
-func New(file string) *Config {
+func New(file string) (*Config, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
-		log.Fatal("error reading %s: %s", file, err)
+		return nil, err
 	}
 
 	cfg := Config{}
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
-		log.Fatal("error parsing: %s", err)
+		return nil, err
 	}
 
-	return &cfg
+	return &cfg, nil
 }

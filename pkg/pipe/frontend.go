@@ -2,6 +2,7 @@ package pipe
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/joyqi/ngate/internal/log"
 	"github.com/joyqi/ngate/pkg/auth"
 	"github.com/valyala/fasthttp"
@@ -16,12 +17,14 @@ type Frontend struct {
 	Session        *Session
 }
 
-func (frontend *Frontend) Serve() {
+func (frontend *Frontend) Serve() error {
 	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendAddr)
 
 	if err := fasthttp.ListenAndServe(frontend.Addr, frontend.handler); err != nil {
-		log.Fatal("http server error: %s", err)
+		return fmt.Errorf("http server error: %s", err)
 	}
+
+	return nil
 }
 
 // SoftRedirect perform a redirect handle by javascript code
