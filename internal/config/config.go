@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/joyqi/dahuang/pkg/log"
+	"github.com/joyqi/dahuang/internal/log"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )

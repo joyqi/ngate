@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"github.com/joyqi/dahuang/pkg/config"
-	"github.com/joyqi/dahuang/pkg/log"
+	"github.com/joyqi/dahuang/internal/config"
+	"github.com/joyqi/dahuang/internal/log"
 	"github.com/valyala/fasthttp"
 	"net/url"
 )

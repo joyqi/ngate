@@ -2,9 +2,9 @@ package pipe
 
 import (
 	"fmt"
+	"github.com/joyqi/dahuang/internal/config"
+	"github.com/joyqi/dahuang/internal/log"
 	"github.com/joyqi/dahuang/pkg/auth"
-	"github.com/joyqi/dahuang/pkg/config"
-	"github.com/joyqi/dahuang/pkg/log"
 )
 
 type Pipe interface {
