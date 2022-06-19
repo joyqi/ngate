@@ -19,6 +19,7 @@ type Frontend struct {
 }
 
 func (frontend *Frontend) Serve() {
+	defer frontend.Wait.Done()
 	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendAddr)
 
 	if err := fasthttp.ListenAndServe(frontend.Addr, frontend.handler); err != nil {
