@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"github.com/joyqi/ngate/internal/config"
 	"github.com/joyqi/ngate/pkg/auth"
+	"github.com/valyala/fasthttp"
+	"net"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type Pipe interface {
@@ -25,13 +29,23 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			return err
 		}
 
+		addr := net.JoinHostPort(
+			defaultHost(pipeConfig.Host, "0.0.0.0"),
+			defaultPort(pipeConfig.Port, 8000))
+
+		backendAddr := net.JoinHostPort(
+			defaultHost(pipeConfig.Backend.Host, "127.0.0.1"),
+			defaultPort(pipeConfig.Backend.Port, 8000))
+
 		frontend := &Frontend{
-			Addr:           fmt.Sprint(Addr{pipeConfig.Host, pipeConfig.Port}),
-			BackendAddr:    fmt.Sprint(Addr{pipeConfig.Backend.Host, pipeConfig.Backend.Port}),
-			BackendTimeout: pipeConfig.Backend.Timeout,
+			Addr:           addr,
 			Session:        session,
 			Auth:           auth,
 			Wait:           wg,
+			BackendTimeout: time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
+			BackendProxy: &fasthttp.HostClient{
+				Addr: backendAddr,
+			},
 		}
 
 		go frontend.Serve()
@@ -41,15 +55,18 @@ func New(cfg *config.Config, auth auth.Auth) error {
 	return nil
 }
 
-type Addr struct {
-	Host string
-	Port int
-}
-
-func (a Addr) String() string {
-	if a.Host == "" {
-		a.Host = "0.0.0.0"
+func defaultHost(host string, defaultHost string) string {
+	if host == "" {
+		return defaultHost
 	}
 
-	return fmt.Sprintf("%s:%d", a.Host, a.Port)
+	return host
+}
+
+func defaultPort(port int, defaultPort int) string {
+	if port == 0 {
+		port = defaultPort
+	}
+
+	return strconv.Itoa(port)
 }

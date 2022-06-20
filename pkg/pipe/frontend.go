@@ -2,6 +2,7 @@ package pipe
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/joyqi/ngate/internal/log"
 	"github.com/joyqi/ngate/pkg/auth"
 	"github.com/valyala/fasthttp"
@@ -11,18 +12,40 @@ import (
 
 type Frontend struct {
 	Addr           string
-	BackendAddr    string
-	BackendTimeout int64
 	Auth           auth.Auth
 	Session        *Session
 	Wait           *sync.WaitGroup
+	BackendProxy   *fasthttp.HostClient
+	BackendTimeout time.Duration
+}
+
+// Hop-by-hop headers. These are removed when sent to the backend.
+// As of RFC 7230, hop-by-hop headers are required to appear in the
+// Connection header field. These are the headers defined by the
+// obsoleted RFC 2616 (section 13.5.1) and are used for backward
+// compatibility.
+var hopHeaders = []string{
+	"Connection",          // Connection
+	"Proxy-Connection",    // non-standard but still sent by libcurl and rejected by e.g. google
+	"Keep-Alive",          // Keep-Alive
+	"Proxy-Authenticate",  // Proxy-Authenticate
+	"Proxy-Authorization", // Proxy-Authorization
+	"Te",                  // canonicalized version of "TE"
+	"Trailer",             // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
+	"Transfer-Encoding",   // Transfer-Encoding
+	"Upgrade",             // Upgrade
 }
 
 func (frontend *Frontend) Serve() {
 	defer frontend.Wait.Done()
-	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendAddr)
+	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendProxy.Addr)
 
-	if err := fasthttp.ListenAndServe(frontend.Addr, frontend.handler); err != nil {
+	s := fasthttp.Server{
+		Handler:                      frontend.handler,
+		DisablePreParseMultipartForm: true,
+	}
+
+	if err := s.ListenAndServe(frontend.Addr); err != nil {
 		log.Error("http server error: %s", err)
 	}
 }
@@ -56,18 +79,26 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 }
 
 func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
-	hc := &fasthttp.HostClient{
-		Addr: frontend.BackendAddr,
-	}
-
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	if err := hc.DoTimeout(req, resp, time.Duration(frontend.BackendTimeout)*time.Millisecond); err != nil {
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+	for _, h := range hopHeaders {
+		req.Header.Del(h)
+	}
+
+	if err := frontend.BackendProxy.DoTimeout(req, resp, frontend.BackendTimeout); err != nil {
+		if errors.Is(err, fasthttp.ErrTimeout) {
+			ctx.Error(err.Error(), fasthttp.StatusRequestTimeout)
+		} else {
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		}
 		log.Error("%s %s%s %s", req.Header.Method(), req.Host(), req.RequestURI(), err.Error())
 	} else {
 		log.Info("%s %s%s %d", req.Header.Method(), req.Host(), req.RequestURI(), resp.StatusCode())
+	}
+
+	for _, h := range hopHeaders {
+		resp.Header.Del(h)
 	}
 }
 
