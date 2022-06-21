@@ -93,8 +93,6 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
 		}
 		log.Error("%s %s%s %s", req.Header.Method(), req.Host(), req.RequestURI(), err.Error())
-	} else {
-		log.Info("%s %s%s %d", req.Header.Method(), req.Host(), req.RequestURI(), resp.StatusCode())
 	}
 
 	for _, h := range hopHeaders {
