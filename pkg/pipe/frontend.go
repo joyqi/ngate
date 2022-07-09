@@ -41,8 +41,9 @@ func (frontend *Frontend) Serve() {
 	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendProxy.Addr)
 
 	s := fasthttp.Server{
-		Handler:                      frontend.handler,
-		DisablePreParseMultipartForm: true,
+		Handler:                       frontend.handler,
+		DisablePreParseMultipartForm:  true,
+		DisableHeaderNamesNormalizing: true,
 	}
 
 	if err := s.ListenAndServe(frontend.Addr); err != nil {
