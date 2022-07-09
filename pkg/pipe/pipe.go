@@ -44,7 +44,9 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			Wait:           wg,
 			BackendTimeout: time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
 			BackendProxy: &fasthttp.HostClient{
-				Addr: backendAddr,
+				Addr:                          backendAddr,
+				DisableHeaderNamesNormalizing: true,
+				DisablePathNormalizing:        true,
 			},
 		}
 

@@ -82,9 +82,9 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	req := &ctx.Request
 	resp := &ctx.Response
 
-	// for _, h := range hopHeaders {
-	//	req.Header.Del(h)
-	//}
+	for _, h := range hopHeaders {
+		req.Header.Del(h)
+	}
 
 	if err := frontend.BackendProxy.DoTimeout(req, resp, frontend.BackendTimeout); err != nil {
 		if errors.Is(err, fasthttp.ErrTimeout) {
@@ -95,9 +95,9 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 		log.Error("%s %s%s %s", req.Header.Method(), req.Host(), req.RequestURI(), err.Error())
 	}
 
-	//for _, h := range hopHeaders {
-	//	resp.Header.Del(h)
-	//}
+	for _, h := range hopHeaders {
+		resp.Header.Del(h)
+	}
 }
 
 func (frontend *Frontend) close(ctx *fasthttp.RequestCtx, session *SessionStore) {
