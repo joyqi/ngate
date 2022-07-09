@@ -115,6 +115,9 @@ func (store *SessionStore) Save() {
 		c.SetValue(value)
 		c.SetPath("/")
 		c.SetDomain(store.Config.CookieDomain)
+		c.SetHTTPOnly(true)
+		c.SetSecure(true)
+		c.SetSameSite(fasthttp.CookieSameSiteNoneMode)
 		store.Ctx.Response.Header.SetCookie(&c)
 	}
 }
