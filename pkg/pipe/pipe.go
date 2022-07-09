@@ -47,6 +47,7 @@ func New(cfg *config.Config, auth auth.Auth) error {
 				Addr:                          backendAddr,
 				DisableHeaderNamesNormalizing: true,
 				DisablePathNormalizing:        true,
+				ReadBufferSize:                64 * 1024,
 			},
 		}
 
