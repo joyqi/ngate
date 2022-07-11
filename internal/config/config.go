@@ -39,9 +39,10 @@ type SessionConfig struct {
 }
 
 type BackendConfig struct {
-	Host    string `yaml:"host"`
-	Port    int    `yaml:"port"`
-	Timeout int64  `yaml:"timeout"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	HostName string `yaml:"host_name"`
+	Timeout  int64  `yaml:"timeout"`
 }
 
 // New read and parse a yaml file

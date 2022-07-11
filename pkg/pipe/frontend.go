@@ -11,12 +11,13 @@ import (
 )
 
 type Frontend struct {
-	Addr           string
-	Auth           auth.Auth
-	Session        *Session
-	Wait           *sync.WaitGroup
-	BackendProxy   *fasthttp.HostClient
-	BackendTimeout time.Duration
+	Addr            string
+	Auth            auth.Auth
+	Session         *Session
+	Wait            *sync.WaitGroup
+	BackendHostName string
+	BackendProxy    *fasthttp.HostClient
+	BackendTimeout  time.Duration
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -83,6 +84,11 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	req := &ctx.Request
 	resp := &ctx.Response
+
+	// set hostname for request
+	if frontend.BackendHostName != "" {
+		req.SetHost(frontend.BackendHostName)
+	}
 
 	// for _, h := range hopHeaders {
 	//	req.Header.Del(h)

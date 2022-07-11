@@ -38,11 +38,12 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			defaultPort(pipeConfig.Backend.Port, 8000))
 
 		frontend := &Frontend{
-			Addr:           addr,
-			Session:        session,
-			Auth:           auth,
-			Wait:           wg,
-			BackendTimeout: time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
+			Addr:            addr,
+			Session:         session,
+			Auth:            auth,
+			Wait:            wg,
+			BackendHostName: pipeConfig.Backend.HostName,
+			BackendTimeout:  time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
 			BackendProxy: &fasthttp.HostClient{
 				Addr:                          backendAddr,
 				DisableHeaderNamesNormalizing: true,
