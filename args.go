@@ -11,7 +11,7 @@ func NewArgs() *Args {
 	args := Args{}
 
 	flag.StringVar(&args.ConfigFile, "c", "config.yaml", "Config file path")
-	flag.BoolVar(&args.DebugMode, "c", false, "Debug mode")
+	flag.BoolVar(&args.DebugMode, "d", false, "Debug mode")
 	flag.Parse()
 
 	return &args
