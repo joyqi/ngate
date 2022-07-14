@@ -94,14 +94,19 @@ func (f *Feishu) Valid(session Session) bool {
 					session.Delete("valid_at")
 				}
 
+				log.Debug("access_token: refresh: %s", refreshToken)
 				refreshLock.Delete(accessToken)
 				return valid
 			}
+
+			log.Debug("access_token: locked")
 		} else {
+			log.Debug("access_token: valid")
 			return true
 		}
 	}
 
+	log.Debug("access_token: null")
 	return false
 }
 

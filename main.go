@@ -13,7 +13,12 @@ func init() {
 	var err error
 
 	args := NewArgs()
-	if cfg, err = config.New(args.configFile); err != nil {
+
+	if args.DebugMode {
+		log.DebugMode = true
+	}
+
+	if cfg, err = config.New(args.ConfigFile); err != nil {
 		log.Fatal("error parsing config: %s", err)
 	}
 }

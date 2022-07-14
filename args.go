@@ -3,13 +3,15 @@ package main
 import "flag"
 
 type Args struct {
-	configFile string
+	ConfigFile string
+	DebugMode  bool
 }
 
 func NewArgs() *Args {
 	args := Args{}
 
-	flag.StringVar(&args.configFile, "c", "config.yaml", "Config file path")
+	flag.StringVar(&args.ConfigFile, "c", "config.yaml", "Config file path")
+	flag.BoolVar(&args.DebugMode, "c", false, "Debug mode")
 	flag.Parse()
 
 	return &args

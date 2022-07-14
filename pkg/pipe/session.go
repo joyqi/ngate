@@ -58,6 +58,8 @@ func (store *SessionStore) Init() {
 	if len(cookie) > 0 {
 		if err := store.Cookie.Decode(store.Config.CookieKey, string(cookie), &store.data); err != nil {
 			log.Warning("wrong cookie: %s", err)
+		} else {
+			log.Debug("cookie: %s", store.data)
 		}
 	}
 }

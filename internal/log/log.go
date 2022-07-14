@@ -23,6 +23,7 @@ const (
 )
 
 var loggers = make(map[Type]*sysLog.Logger)
+var DebugMode = false
 
 func getLogger(name Type) *sysLog.Logger {
 	if loggers[name] == nil {
@@ -35,6 +36,13 @@ func getLogger(name Type) *sysLog.Logger {
 // Info prints a normal message with the default color
 func Info(format string, v ...any) {
 	getLogger(InfoLog).Println(fmt.Sprintf(format, v...))
+}
+
+// Debug prints a normal message with the default color
+func Debug(format string, v ...any) {
+	if DebugMode {
+		Info(format, v...)
+	}
 }
 
 // Success prints a success message in the green color
