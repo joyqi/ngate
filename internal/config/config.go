@@ -24,10 +24,16 @@ type AuthConfig struct {
 }
 
 type PipeConfig struct {
-	Host    string        `yaml:"host"`
-	Port    int           `yaml:"port"`
-	Session SessionConfig `yaml:"session"`
-	Backend BackendConfig `yaml:"backend"`
+	Host    string         `yaml:"host"`
+	Port    int            `yaml:"port"`
+	Session SessionConfig  `yaml:"session"`
+	Backend BackendConfig  `yaml:"backend"`
+	Access  []AccessConfig `yaml:"access,flow"`
+}
+
+type AccessConfig struct {
+	HostName string   `yaml:"host_name"`
+	Groups   []string `yaml:"groups,flow"`
 }
 
 type SessionConfig struct {

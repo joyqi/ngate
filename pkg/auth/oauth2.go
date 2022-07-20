@@ -38,6 +38,10 @@ func (oauth *OAuth2) Valid(session Session) bool {
 	return session.Get("access_token") != ""
 }
 
+func (oauth *OAuth2) GroupValid(hostName string, session Session, valid PipeGroupValid) bool {
+	return true
+}
+
 func (oauth *OAuth2) config() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     oauth.Config.ClientId,

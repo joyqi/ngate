@@ -7,6 +7,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -42,6 +43,7 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			Session:         session,
 			Auth:            auth,
 			Wait:            wg,
+			GroupValid:      groupValid(pipeConfig.Access),
 			BackendHostName: pipeConfig.Backend.HostName,
 			BackendTimeout:  time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
 			BackendProxy: &fasthttp.HostClient{
@@ -57,6 +59,44 @@ func New(cfg *config.Config, auth auth.Auth) error {
 
 	wg.Wait()
 	return nil
+}
+
+func selectGroups(hostName string, accessConfig []config.AccessConfig) []string {
+	for _, c := range accessConfig {
+		if c.HostName == hostName {
+			return c.Groups
+		}
+	}
+
+	return nil
+}
+
+func existsGroup(group string, selectGroups []string) bool {
+	for _, g := range selectGroups {
+		if group == g {
+			return true
+		}
+	}
+
+	return false
+}
+
+func groupValid(accessConfig []config.AccessConfig) auth.PipeGroupValid {
+	return func(group string, hostName string) bool {
+		sg := selectGroups(hostName, accessConfig)
+
+		if sg != nil {
+			for _, g := range strings.Split(group, ",") {
+				if existsGroup(g, sg) {
+					return true
+				}
+			}
+
+			return false
+		}
+
+		return true
+	}
 }
 
 func defaultHost(host string, defaultHost string) string {

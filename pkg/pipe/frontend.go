@@ -11,6 +11,7 @@ import (
 )
 
 type Frontend struct {
+	GroupValid      auth.PipeGroupValid
 	Addr            string
 	Auth            auth.Auth
 	Session         *Session
@@ -75,7 +76,11 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 	defer frontend.close(ctx, session)
 
 	if frontend.Auth.Valid(session) {
-		frontend.requestBackend(ctx)
+		if frontend.Auth.GroupValid(string(ctx.Request.Host()), session, frontend.GroupValid) {
+			frontend.requestBackend(ctx)
+		} else {
+			ctx.Error("Access Denied", fasthttp.StatusForbidden)
+		}
 	} else {
 		frontend.Auth.Handler(ctx, session, frontend.SoftRedirect(ctx))
 	}

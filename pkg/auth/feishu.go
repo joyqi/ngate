@@ -18,6 +18,7 @@ const (
 	FeishuTokenURL        = "https://open.feishu.cn/open-apis/authen/v1/access_token"
 	FeishuRefreshTokenURL = "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token"
 	FeishuTenantTokenURL  = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+	FeishuUserGroupURL    = "https://open.feishu.cn/open-apis/contact/v3/group/member_belong"
 )
 
 // feishu tenant token
@@ -52,12 +53,22 @@ type FeishuAccessToken struct {
 	} `json:"data"`
 }
 
+type FeishuUserGroup struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		GroupList []string `json:"group_list,flow"`
+		HasMore   bool     `json:"has_more"`
+	} `json:"data"`
+}
+
 func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
 	if f.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
 		accessToken := f.retrieveToken(string(ctx.QueryArgs().Peek("code")))
 
 		if accessToken != nil && accessToken.Code == 0 {
 			state := ctx.QueryArgs().Peek("state")
+			group := f.retrieveUserGroup(accessToken.Data.OpenId)
 
 			if len(state) > 0 {
 				redirect(string(state))
@@ -65,6 +76,7 @@ func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Sof
 				ctx.Error("Not Found", fasthttp.StatusNotFound)
 			}
 
+			session.Set("group", group)
 			session.Set("access_token", accessToken.Data.AccessToken)
 			session.Set("refresh_token", accessToken.Data.RefreshToken)
 			session.SetInt("valid_at", time.Now().Unix())
@@ -84,6 +96,9 @@ func (f *Feishu) Valid(session Session) bool {
 				valid := false
 
 				if refreshToken != nil && refreshToken.Code == 0 {
+					group := f.retrieveUserGroup(refreshToken.Data.OpenId)
+
+					session.Set("group", group)
 					session.Set("access_token", refreshToken.Data.AccessToken)
 					session.Set("refresh_token", refreshToken.Data.RefreshToken)
 					session.SetInt("valid_at", time.Now().Unix())
@@ -108,6 +123,10 @@ func (f *Feishu) Valid(session Session) bool {
 
 	log.Debug("access_token: null")
 	return false
+}
+
+func (f *Feishu) GroupValid(hostName string, session Session, valid PipeGroupValid) bool {
+	return valid(session.Get("group"), hostName)
 }
 
 func (f Feishu) requestTenantToken() {
@@ -189,6 +208,30 @@ func (f *Feishu) retrieveRefreshToken(refreshToken string) *FeishuAccessToken {
 	}
 
 	return &token
+}
+
+func (f Feishu) retrieveUserGroup(openId string) string {
+	f.requestTenantToken()
+	if tenantToken == nil {
+		return ""
+	}
+
+	data := map[string]string{
+		"member_id": openId,
+	}
+
+	body, err := f.postURL(FeishuUserGroupURL, data, tenantToken.TenantAccessToken)
+	if err != nil {
+		return ""
+	}
+
+	group := FeishuUserGroup{}
+	err = json.Unmarshal(body, &group)
+	if err != nil {
+		return ""
+	}
+
+	return strings.Join(group.Data.GroupList, ",")
 }
 
 func (f *Feishu) postURL(url string, data interface{}, token string) ([]byte, error) {

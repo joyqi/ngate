@@ -8,6 +8,7 @@ import (
 )
 
 type SoftRedirect func(url string)
+type PipeGroupValid func(group string, hostName string) bool
 
 type Session interface {
 	Set(key string, value string)
@@ -21,6 +22,7 @@ type Session interface {
 type Auth interface {
 	Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect)
 	Valid(session Session) bool
+	GroupValid(hostName string, session Session, valid PipeGroupValid) bool
 }
 
 // New parse the auth block of the config file
@@ -33,6 +35,8 @@ func New(cfg *config.AuthConfig) (Auth, error) {
 	}
 
 	switch cfg.Kind {
+	case "fake":
+		a = &Fake{}
 	case "feishu":
 		a = &Feishu{BaseAuth{u}, cfg}
 	case "oauth2":

@@ -1,10 +1,14 @@
 auth:
-  kind: "feishu"
+  kind: "fake"
   redirect_url: "https://example.com/oauth_callback"
   app_id: "cli_xxxxxxx"
   app_secret: "xxxxxxxx"
 pipes:
   - port: 8070
+    access:
+      - host_name: 'git.example.com'
+        groups:
+          - developer
     session:
       cookie_key: "__test__"
       cookie_domain: ".example.com"
