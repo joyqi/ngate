@@ -216,11 +216,7 @@ func (f Feishu) retrieveUserGroup(openId string) string {
 		return ""
 	}
 
-	data := map[string]string{
-		"member_id": openId,
-	}
-
-	body, err := f.postURL(FeishuUserGroupURL, data, tenantToken.TenantAccessToken)
+	body, err := f.getURL(FeishuUserGroupURL+"?member_id="+openId, tenantToken.TenantAccessToken)
 	if err != nil {
 		return ""
 	}
@@ -258,6 +254,30 @@ func (f *Feishu) postURL(url string, data interface{}, token string) ([]byte, er
 	}
 
 	err = c.Do(req, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body(), nil
+}
+
+func (f *Feishu) getURL(url string, token string) ([]byte, error) {
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	c := &fasthttp.Client{}
+
+	defer func() {
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(resp)
+	}()
+
+	req.SetRequestURI(url)
+	req.Header.SetMethod(fasthttp.MethodGet)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	err := c.Do(req, resp)
 	if err != nil {
 		return nil, err
 	}
