@@ -1,8 +1,9 @@
 auth:
   kind: "fake"
-  redirect_url: "https://example.com/oauth_callback"
-  app_id: "cli_xxxxxxx"
-  app_secret: "xxxxxxxx"
+  spec:
+    redirect_url: "https://example.com/oauth_callback"
+    app_id: "cli_xxxxxxx"
+    app_secret: "xxxxxxxx"
 pipes:
   - port: 8070
     access:

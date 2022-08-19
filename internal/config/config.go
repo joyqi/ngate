@@ -2,7 +2,7 @@ package config
 
 import (
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
+	"os"
 )
 
 type Config struct {
@@ -53,7 +53,7 @@ type BackendConfig struct {
 
 // New read and parse a yaml file
 func New(file string) (*Config, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
