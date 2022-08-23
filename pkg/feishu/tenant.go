@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/joyqi/ngate/pkg/http"
+	"time"
 )
 
 var TenantEndpointURL = TenantEndpoint{
@@ -37,25 +38,38 @@ type TenantTokenResponse struct {
 
 // TenantToken represents a tenant access token from tenant token endpoint
 func (c *Config) TenantToken() (string, error) {
-	req := &TenantTokenRequest{
-		AppID:     c.AppID,
-		AppSecret: c.AppSecret,
+	defer c.tenantTokenMu.Unlock()
+
+	c.tenantTokenMu.Lock()
+	if !c.TenantTokenValid() {
+		req := &TenantTokenRequest{
+			AppID:     c.AppID,
+			AppSecret: c.AppSecret,
+		}
+
+		body, err := http.PostJSON(TenantEndpointURL.TokenURL, req)
+		if err != nil {
+			return "", err
+		}
+
+		resp := TenantTokenResponse{}
+		err = json.Unmarshal(body, &resp)
+		if err != nil {
+			return "", err
+		}
+
+		if resp.Code != 0 {
+			return "", errors.New(resp.Msg)
+		}
+
+		c.tenantToken = resp.TenantAccessToken
+		c.tenantTokenExpireAt = time.Now().Add(time.Duration(resp.Expire) * time.Second)
 	}
 
-	body, err := http.PostJSON(TenantEndpointURL.TokenURL, req)
-	if err != nil {
-		return "", err
-	}
+	return c.tenantToken, nil
+}
 
-	resp := TenantTokenResponse{}
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.Code != 0 {
-		return "", errors.New(resp.Msg)
-	}
-
-	return resp.TenantAccessToken, nil
+// TenantTokenValid returns true if the tenant token is valid
+func (c *Config) TenantTokenValid() bool {
+	return c.tenantToken != "" && time.Now().Add(time.Minute).Before(c.tenantTokenExpireAt)
 }

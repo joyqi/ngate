@@ -2,11 +2,13 @@ package feishu
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/joyqi/ngate/pkg/http"
-	"github.com/valyala/fasthttp"
 	"net/url"
+	"sync"
+	"time"
 )
 
 var EndpointURL = Endpoint{
@@ -70,6 +72,15 @@ type Config struct {
 
 	// RedirectURL is the URL to redirect users going through
 	RedirectURL string
+
+	// tenantTokenMu is the lock for tenant token request
+	tenantTokenMu sync.Mutex
+
+	// tenantToken is the tenant token
+	tenantToken string
+
+	// tenantTokenExpireAt is the expiration time of the tenant token
+	tenantTokenExpireAt time.Time
 }
 
 // AuthCodeURL is the URL to redirect users going through authentication
@@ -94,7 +105,12 @@ func (c *Config) AuthCodeURL(state string) string {
 }
 
 // Exchange retrieve the token from access token endpoint
-func (c *Config) Exchange(ctx *fasthttp.RequestCtx, code string, tenantToken string) (*Token, error) {
+func (c *Config) Exchange(ctx context.Context, code string) (*Token, error) {
+	tenantToken, err := c.TenantToken()
+	if err != nil {
+		return nil, err
+	}
+
 	req := &TokenRequest{
 		GrantType: "authorization_code",
 		Code:      code,
