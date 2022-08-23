@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/joyqi/ngate/pkg/http"
+	"golang.org/x/oauth2"
 	"net/url"
 	"sync"
 	"time"
@@ -33,21 +34,14 @@ type Endpoint struct {
 	UserGroupApiURL string
 }
 
-// Token represents the credentials
-type Token struct {
-	// AccessToken is the token used to access the application
-	AccessToken string `json:"access_token"`
-
-	// RefreshToken is the token used to refresh the user's access token
-	RefreshToken string `json:"refresh_token"`
-
-	// ExpiresIn is the number of seconds the token will be valid
-	ExpiresIn int64 `json:"expires_in"`
-}
-
 type TokenRequest struct {
 	GrantType string `json:"grant_type"`
 	Code      string `json:"code"`
+}
+
+type RefreshTokenRequest struct {
+	GrantType    string `json:"grant_type"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 // TokenResponse represents the response from the Token service
@@ -59,7 +53,16 @@ type TokenResponse struct {
 	Msg string `json:"msg"`
 
 	// Data is the response body data
-	Data Token `json:"data"`
+	Data struct {
+		// AccessToken is the token used to access the application
+		AccessToken string `json:"access_token"`
+
+		// RefreshToken is the token used to refresh the user's access token
+		RefreshToken string `json:"refresh_token"`
+
+		// ExpiresIn is the number of seconds the token will be valid
+		ExpiresIn int64 `json:"expires_in"`
+	} `json:"data"`
 }
 
 // Config represents the configuration of the feishu service
@@ -105,19 +108,63 @@ func (c *Config) AuthCodeURL(state string) string {
 }
 
 // Exchange retrieve the token from access token endpoint
-func (c *Config) Exchange(ctx context.Context, code string) (*Token, error) {
-	tenantToken, err := c.TenantToken()
-	if err != nil {
-		return nil, err
-	}
-
+func (c *Config) Exchange(ctx context.Context, code string) (*oauth2.Token, error) {
 	req := &TokenRequest{
 		GrantType: "authorization_code",
 		Code:      code,
 	}
 
+	return retrieveToken(req, c)
+}
+
+func (c *Config) TokenSource(ctx context.Context, t *oauth2.Token) oauth2.TokenSource {
+	return &feishuTokenSource{
+		ctx:  ctx,
+		conf: c,
+		t:    t,
+	}
+}
+
+type feishuTokenSource struct {
+	ctx  context.Context
+	conf *Config
+	t    *oauth2.Token
+}
+
+func (s *feishuTokenSource) Token() (*oauth2.Token, error) {
+	if !s.valid() {
+		token, err := s.refresh()
+		if err != nil {
+			return nil, err
+		}
+
+		s.t = token
+	}
+
+	return s.t, nil
+}
+
+func (s *feishuTokenSource) valid() bool {
+	return time.Now().Add(time.Minute).Before(s.t.Expiry)
+}
+
+func (s *feishuTokenSource) refresh() (*oauth2.Token, error) {
+	req := &RefreshTokenRequest{
+		RefreshToken: s.t.RefreshToken,
+		GrantType:    "refresh_token",
+	}
+
+	return retrieveToken(req, s.conf)
+}
+
+func retrieveToken(req interface{}, conf *Config) (*oauth2.Token, error) {
+	tenantToken, err := conf.TenantToken()
+	if err != nil {
+		return nil, err
+	}
+
 	body, err := http.PostJSON(
-		EndpointURL.TokenURL,
+		EndpointURL.RefreshTokenURL,
 		req,
 		http.Header{Key: "Authorization", Value: tenantToken},
 	)
@@ -136,5 +183,12 @@ func (c *Config) Exchange(ctx context.Context, code string) (*Token, error) {
 		return nil, errors.New(resp.Msg)
 	}
 
-	return &resp.Data, nil
+	token := &oauth2.Token{
+		AccessToken:  resp.Data.AccessToken,
+		TokenType:    "Bearer",
+		RefreshToken: resp.Data.RefreshToken,
+		Expiry:       time.Unix(resp.Data.ExpiresIn, 0),
+	}
+
+	return token, nil
 }
