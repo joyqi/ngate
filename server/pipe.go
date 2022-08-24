@@ -1,9 +1,9 @@
-package pipe
+package server
 
 import (
 	"fmt"
-	"github.com/joyqi/ngate/internal/config"
-	"github.com/joyqi/ngate/pkg/auth"
+	"github.com/joyqi/ngate/auth"
+	"github.com/joyqi/ngate/config"
 	"github.com/valyala/fasthttp"
 	"net"
 	"strconv"

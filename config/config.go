@@ -51,8 +51,8 @@ type BackendConfig struct {
 	Timeout  int64  `yaml:"timeout"`
 }
 
-// New read and parse a yaml file
-func New(file string) (*Config, error) {
+// ReadFile read and parse a yaml file
+func ReadFile(file string) (*Config, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err

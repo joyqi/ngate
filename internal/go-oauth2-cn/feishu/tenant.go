@@ -3,7 +3,7 @@ package feishu
 import (
 	"encoding/json"
 	"errors"
-	"github.com/joyqi/ngate/pkg/http"
+	"github.com/joyqi/ngate/internal/go-oauth2-cn/http"
 	"time"
 )
 

@@ -1,10 +1,10 @@
-package pipe
+package server
 
 import (
 	"fmt"
 	"github.com/gorilla/securecookie"
-	"github.com/joyqi/ngate/internal/config"
-	"github.com/joyqi/ngate/internal/log"
+	"github.com/joyqi/ngate/config"
+	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"strconv"
 	"time"

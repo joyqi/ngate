@@ -3,8 +3,8 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/joyqi/ngate/internal/config"
-	"github.com/joyqi/ngate/internal/log"
+	"github.com/joyqi/ngate/config"
+	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"net/url"
 	"strings"
@@ -135,7 +135,7 @@ func (f Feishu) requestTenantToken() {
 
 		if tenantToken != nil && tenantToken.Code == 0 {
 			tenantTokenExpireAt = now + tenantToken.Expire
-			log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
+			log.Info("feishu tenant token: %s", tenantToken.TenantAccessToken)
 		}
 	}
 }

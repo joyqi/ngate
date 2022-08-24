@@ -2,7 +2,7 @@ package auth
 
 import (
 	"fmt"
-	"github.com/joyqi/ngate/internal/config"
+	"github.com/joyqi/ngate/config"
 	"github.com/valyala/fasthttp"
 	"net/url"
 )

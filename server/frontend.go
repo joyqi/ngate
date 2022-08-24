@@ -1,10 +1,10 @@
-package pipe
+package server
 
 import (
 	"encoding/json"
 	"errors"
-	"github.com/joyqi/ngate/internal/log"
-	"github.com/joyqi/ngate/pkg/auth"
+	"github.com/joyqi/ngate/auth"
+	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"sync"
 	"time"
@@ -40,7 +40,7 @@ var hopHeaders = []string{
 
 func (frontend *Frontend) Serve() {
 	defer frontend.Wait.Done()
-	log.Success("http pipe %s -> %s", frontend.Addr, frontend.BackendProxy.Addr)
+	log.Info("http server %s -> %s", frontend.Addr, frontend.BackendProxy.Addr)
 
 	s := fasthttp.Server{
 		Handler:                       frontend.handler,
