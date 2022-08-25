@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/joyqi/ngate/auth"
+	"github.com/joyqi/ngate/auth/session"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 	"sync"
@@ -14,7 +15,7 @@ type Frontend struct {
 	GroupValid      auth.PipeGroupValid
 	Addr            string
 	Auth            auth.Auth
-	Session         *Session
+	Session         *session.Session
 	Wait            *sync.WaitGroup
 	BackendHostName string
 	BackendProxy    *fasthttp.HostClient
@@ -55,25 +56,41 @@ func (frontend *Frontend) Serve() {
 }
 
 // SoftRedirect perform a redirect handle by javascript code
-func (frontend *Frontend) SoftRedirect(ctx *fasthttp.RequestCtx) auth.SoftRedirect {
-	return func(url string) {
-		u, err := json.Marshal(url)
-		if err != nil {
-			ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
-			return
-		}
+func (frontend *Frontend) SoftRedirect(ctx *fasthttp.RequestCtx, url string) {
+	u, err := json.Marshal(url)
+	if err != nil {
+		ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
+		return
+	}
 
-		ctx.SetContentType("text/html")
-		if _, err = ctx.WriteString("<script>window.location.href=" + string(u) + "</script>"); err != nil {
-			ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
-		}
+	ctx.SetContentType("text/html")
+	if _, err = ctx.WriteString("<script>window.location.href=" + string(u) + "</script>"); err != nil {
+		ctx.Error("Wrong Url", fasthttp.StatusBadRequest)
 	}
 }
 
 func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
-	session := frontend.Session.Store(ctx)
+	sess := frontend.Session.Store(ctx)
+	a := frontend.Auth
+	reqURL := "//" + string(ctx.Host()) + string(ctx.RequestURI())
 
-	defer frontend.close(ctx, session)
+	defer frontend.close(ctx, sess)
+
+	if sess.Token == nil {
+		if a.ValidURL(string(ctx.Host()), string(ctx.Path())) {
+			a.RetrieveToken(ctx)
+		} else {
+			frontend.SoftRedirect(ctx, a.AuthURL(reqURL))
+		}
+	} else {
+		tk, err := a.ValidToken(ctx, sess.Token)
+
+		if err != nil {
+			ctx.Error("", fasthttp.StatusInternalServerError)
+		} else {
+			sess.Token = tk
+		}
+	}
 
 	if frontend.Auth.Valid(session) {
 		if frontend.Auth.GroupValid(string(ctx.Request.Host()), session, frontend.GroupValid) {
@@ -113,7 +130,7 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	// }
 }
 
-func (frontend *Frontend) close(ctx *fasthttp.RequestCtx, session *SessionStore) {
-	session.Save()
+func (frontend *Frontend) close(ctx *fasthttp.RequestCtx, sess *session.Store) {
+	sess.Save()
 	log.Info("%s %s%s %d", ctx.Request.Header.Method(), ctx.Request.Host(), ctx.Request.RequestURI(), ctx.Response.StatusCode())
 }

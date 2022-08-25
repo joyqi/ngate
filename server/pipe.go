@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/joyqi/ngate/auth"
+	"github.com/joyqi/ngate/auth/session"
 	"github.com/joyqi/ngate/config"
 	"github.com/valyala/fasthttp"
 	"net"
@@ -25,7 +26,7 @@ func New(cfg *config.Config, auth auth.Auth) error {
 	wg.Add(len(cfg.Pipes))
 
 	for _, pipeConfig := range cfg.Pipes {
-		session, err := NewSession(pipeConfig.Session)
+		sess, err := session.New(pipeConfig.Session)
 		if err != nil {
 			return err
 		}
@@ -40,7 +41,7 @@ func New(cfg *config.Config, auth auth.Auth) error {
 
 		frontend := &Frontend{
 			Addr:            addr,
-			Session:         session,
+			Session:         sess,
 			Auth:            auth,
 			Wait:            wg,
 			GroupValid:      groupValid(pipeConfig.Access),

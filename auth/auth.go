@@ -1,48 +1,40 @@
 package auth
 
 import (
+	"context"
 	"fmt"
+	"github.com/joyqi/ngate/auth/adapters"
+	"github.com/joyqi/ngate/auth/session"
 	"github.com/joyqi/ngate/config"
 	"github.com/valyala/fasthttp"
 	"net/url"
 )
 
-type SoftRedirect func(url string)
-type PipeGroupValid func(group string, hostName string) bool
-
-type Session interface {
-	Set(key string, value string)
-	SetInt(key string, value int64)
-	Get(key string) string
-	GetInt(key string) int64
-	Delete(key string)
-	Expired(last int64) bool
-}
-
 type Auth interface {
-	Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect)
-	Valid(session Session) bool
-	GroupValid(hostName string, session Session, valid PipeGroupValid) bool
+	Init(config *config.AuthConfig) error
+	RetrieveToken(ctx *fasthttp.RequestCtx) (*session.Token, error)
+	ValidURL(host string, path string) bool
+	ValidToken(ctx context.Context, token *session.Token) (*session.Token, error)
+	AuthURL(url string) string
 }
 
 // New parse the auth block of the config file
 func New(cfg *config.AuthConfig) (Auth, error) {
 	var a Auth
 
-	u, err := url.Parse(cfg.RedirectURL)
-	if err != nil {
-		return nil, fmt.Errorf("wrong redirect url: %s", cfg.RedirectURL)
-	}
-
 	switch cfg.Kind {
 	case "fake":
-		a = &Fake{}
 	case "feishu":
-		a = &Feishu{BaseAuth{u}, cfg}
+		a = &adapters.Feishu{}
 	case "oauth2":
 		fallthrough
 	default:
-		a = &OAuth2{BaseAuth{u}, cfg}
+		return nil, fmt.Errorf("wront auth kind: %s", cfg.Kind)
+	}
+
+	err := a.Init(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	return a, nil

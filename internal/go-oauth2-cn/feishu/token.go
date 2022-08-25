@@ -68,7 +68,7 @@ type UserGroupsResponse struct {
 }
 
 func (s *TokenSource) Token() (*Token, error) {
-	if !time.Now().Add(time.Minute).Before(s.t.Expiry) {
+	if !s.valid() {
 		token, err := s.refresh()
 		if err != nil {
 			return nil, err

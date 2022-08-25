@@ -53,5 +53,34 @@ func (store *Store) Save() {
 		return
 	}
 
-	data := make(map[string]string)
+	var c fasthttp.Cookie
+
+	if store.Token == nil {
+		c.SetExpire(fasthttp.CookieExpireDelete)
+	} else {
+		data := make(map[string]string)
+		value, err := json.Marshal(store.Token)
+
+		if err != nil {
+			log.Warning("json encode error")
+			return
+		}
+
+		data["_"] = string(value)
+		encoded, err := store.cookie.Encode(store.cfg.CookieKey, &data)
+
+		if err != nil {
+			log.Warning("encrypt error %s", err)
+			return
+		}
+
+		c.SetKey(store.cfg.CookieKey)
+		c.SetValue(encoded)
+		c.SetPath("/")
+		c.SetDomain(store.cfg.CookieDomain)
+		c.SetHTTPOnly(true)
+		c.SetSecure(true)
+		c.SetSameSite(fasthttp.CookieSameSiteNoneMode)
+		store.ctx.Response.Header.SetCookie(&c)
+	}
 }
