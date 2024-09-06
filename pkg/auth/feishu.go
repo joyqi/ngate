@@ -14,11 +14,11 @@ import (
 
 // Endpoint is feishu's endpoint url
 const (
-	FeishuAuthURL         = "https://open.feishu.cn/open-apis/authen/v1/index"
-	FeishuTokenURL        = "https://open.feishu.cn/open-apis/authen/v1/access_token"
-	FeishuRefreshTokenURL = "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token"
-	FeishuTenantTokenURL  = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
-	FeishuUserGroupURL    = "https://open.feishu.cn/open-apis/contact/v3/group/member_belong"
+	FeishuAuthURL         = "/authen/v1/index"
+	FeishuTokenURL        = "/authen/v1/access_token"
+	FeishuRefreshTokenURL = "/authen/v1/refresh_access_token"
+	FeishuTenantTokenURL  = "/auth/v3/tenant_access_token/internal"
+	FeishuUserGroupURL    = "/contact/v3/group/member_belong"
 )
 
 // feishu tenant token
@@ -129,13 +129,13 @@ func (f *Feishu) GroupValid(hostName string, session Session, valid PipeGroupVal
 	return valid(session.Get("group"), hostName)
 }
 
-func (f Feishu) requestTenantToken() {
+func (f *Feishu) requestTenantToken() {
 	if now := time.Now().Unix(); now > tenantTokenExpireAt {
 		tenantToken = f.retrieveTenantToken()
 
 		if tenantToken != nil && tenantToken.Code == 0 {
 			tenantTokenExpireAt = now + tenantToken.Expire
-			log.Success("feishu tenant token: %s", tenantToken.TenantAccessToken)
+			log.Success("%s tenant token: %s", f.Config.Kind, tenantToken.TenantAccessToken)
 		}
 	}
 }
@@ -210,7 +210,7 @@ func (f *Feishu) retrieveRefreshToken(refreshToken string) *FeishuAccessToken {
 	return &token
 }
 
-func (f Feishu) retrieveUserGroup(openId string) string {
+func (f *Feishu) retrieveUserGroup(openId string) string {
 	f.requestTenantToken()
 	if tenantToken == nil {
 		return ""
@@ -245,7 +245,7 @@ func (f *Feishu) postURL(url string, data interface{}, token string) ([]byte, er
 		return nil, err
 	}
 
-	req.SetRequestURI(url)
+	req.SetRequestURI(f.makeURL(url))
 	req.Header.SetMethod(fasthttp.MethodPost)
 	req.Header.SetContentType("application/json; charset=utf-8")
 	req.SetBody(body)
@@ -271,7 +271,7 @@ func (f *Feishu) getURL(url string, token string) ([]byte, error) {
 		fasthttp.ReleaseResponse(resp)
 	}()
 
-	req.SetRequestURI(url)
+	req.SetRequestURI(f.makeURL(url))
 	req.Header.SetMethod(fasthttp.MethodGet)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -287,7 +287,7 @@ func (f *Feishu) getURL(url string, token string) ([]byte, error) {
 
 func (f *Feishu) authCodeURL(state string) string {
 	var buf bytes.Buffer
-	buf.WriteString(FeishuAuthURL)
+	buf.WriteString(f.makeURL(FeishuAuthURL))
 	v := url.Values{
 		"response_type": {"code"},
 		"app_id":        {f.Config.AppId},
@@ -305,4 +305,13 @@ func (f *Feishu) authCodeURL(state string) string {
 	buf.WriteByte('?')
 	buf.WriteString(v.Encode())
 	return buf.String()
+}
+
+// makeURL adjust the url for feishu or lark
+func (f *Feishu) makeURL(url string) string {
+	if f.Config.Kind == "feishu" {
+		return "https://open.feishu.cn/open-apis" + url
+	} else {
+		return "https://open.larksuite.com/open-apis" + url
+	}
 }

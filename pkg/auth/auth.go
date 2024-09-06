@@ -38,6 +38,7 @@ func New(cfg *config.AuthConfig) (Auth, error) {
 	case "fake":
 		a = &Fake{}
 	case "feishu":
+	case "lark":
 		a = &Feishu{BaseAuth{u}, cfg}
 	case "oauth2":
 		fallthrough
