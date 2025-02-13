@@ -50,34 +50,24 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			return proxyErr
 		}
 
-		wsProxies := sync.Map{}
+		wsProxy, wsProxyErr := proxy.NewWSReverseProxyWith(
+			proxy.WithURL_OptionWS("ws://"+backendAddr),
+			proxy.WithDebug_OptionWS(),
+			proxy.WithDynamicPath_OptionWS(true, proxy.DefaultOverrideHeader))
 
-		getter := func(path string) (*proxy.WSReverseProxy, error) {
-			if v, ok := wsProxies.Load(path); !ok {
-				wsProxy, err := proxy.NewWSReverseProxyWith(
-					proxy.WithURL_OptionWS("ws://" + backendAddr + path))
-
-				if err != nil {
-					return nil, err
-				}
-
-				wsProxies.Store(path, wsProxy)
-				return wsProxy, nil
-			} else {
-				return v.(*proxy.WSReverseProxy), nil
-			}
+		if wsProxyErr != nil {
+			return err
 		}
 
 		frontend := &Frontend{
-			Addr:                 addr,
-			Session:              session,
-			Auth:                 auth,
-			Wait:                 wg,
-			GroupValid:           groupValid(pipeConfig.Access),
-			BackendHostName:      pipeConfig.Backend.HostName,
-			WSBackendProxies:     &wsProxies,
-			WSBackendProxyGetter: getter,
-			BackendProxy:         httpProxy,
+			Addr:            addr,
+			Session:         session,
+			Auth:            auth,
+			Wait:            wg,
+			GroupValid:      groupValid(pipeConfig.Access),
+			BackendHostName: pipeConfig.Backend.HostName,
+			WSBackendProxy:  wsProxy,
+			BackendProxy:    httpProxy,
 		}
 
 		log.Success("http pipe %s -> %s", addr, backendAddr)

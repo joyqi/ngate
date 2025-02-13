@@ -10,15 +10,14 @@ import (
 )
 
 type Frontend struct {
-	GroupValid           auth.PipeGroupValid
-	Addr                 string
-	Auth                 auth.Auth
-	Session              *Session
-	Wait                 *sync.WaitGroup
-	BackendHostName      string
-	WSBackendProxies     *sync.Map
-	WSBackendProxyGetter func(path string) (*proxy.WSReverseProxy, error)
-	BackendProxy         *proxy.ReverseProxy
+	GroupValid      auth.PipeGroupValid
+	Addr            string
+	Auth            auth.Auth
+	Session         *Session
+	Wait            *sync.WaitGroup
+	BackendHostName string
+	WSBackendProxy  *proxy.WSReverseProxy
+	BackendProxy    *proxy.ReverseProxy
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
@@ -96,14 +95,8 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 
 	// detect if the request is websocket
 	if string(req.Header.Peek("Upgrade")) == "websocket" {
-		wsProxy, err := frontend.WSBackendProxyGetter(path)
-
-		if err != nil {
-			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-			return
-		}
-
-		wsProxy.ServeHTTP(ctx)
+		req.Header.Set(proxy.DefaultOverrideHeader, path)
+		frontend.WSBackendProxy.ServeHTTP(ctx)
 	} else {
 		frontend.BackendProxy.ServeHTTP(ctx)
 	}
