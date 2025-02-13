@@ -3,8 +3,9 @@ package pipe
 import (
 	"fmt"
 	"github.com/joyqi/ngate/internal/config"
+	"github.com/joyqi/ngate/internal/log"
 	"github.com/joyqi/ngate/pkg/auth"
-	"github.com/valyala/fasthttp"
+	proxy "github.com/yeqown/fasthttp-reverse-proxy/v2"
 	"net"
 	"strconv"
 	"strings"
@@ -38,22 +39,48 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			defaultHost(pipeConfig.Backend.Host, "127.0.0.1"),
 			defaultPort(pipeConfig.Backend.Port, 8000))
 
-		frontend := &Frontend{
-			Addr:            addr,
-			Session:         session,
-			Auth:            auth,
-			Wait:            wg,
-			GroupValid:      groupValid(pipeConfig.Access),
-			BackendHostName: pipeConfig.Backend.HostName,
-			BackendTimeout:  time.Duration(pipeConfig.Backend.Timeout) * time.Millisecond,
-			BackendProxy: &fasthttp.HostClient{
-				Addr:                          backendAddr,
-				DisableHeaderNamesNormalizing: true,
-				DisablePathNormalizing:        true,
-				ReadBufferSize:                64 * 1024,
-			},
+		httpProxy, proxyErr := proxy.NewReverseProxyWith(
+			proxy.WithAddress(backendAddr),
+			proxy.WithDisablePathNormalizing(true),
+			proxy.WithDisableVirtualHost(true),
+			proxy.WithDebug(),
+			proxy.WithTimeout(time.Duration(pipeConfig.Backend.Timeout)*time.Millisecond))
+
+		if proxyErr != nil {
+			return proxyErr
 		}
 
+		wsProxies := sync.Map{}
+
+		getter := func(path string) (*proxy.WSReverseProxy, error) {
+			if v, ok := wsProxies.Load(path); !ok {
+				wsProxy, err := proxy.NewWSReverseProxyWith(
+					proxy.WithURL_OptionWS("ws://" + backendAddr + path))
+
+				if err != nil {
+					return nil, err
+				}
+
+				wsProxies.Store(path, wsProxy)
+				return wsProxy, nil
+			} else {
+				return v.(*proxy.WSReverseProxy), nil
+			}
+		}
+
+		frontend := &Frontend{
+			Addr:                 addr,
+			Session:              session,
+			Auth:                 auth,
+			Wait:                 wg,
+			GroupValid:           groupValid(pipeConfig.Access),
+			BackendHostName:      pipeConfig.Backend.HostName,
+			WSBackendProxies:     &wsProxies,
+			WSBackendProxyGetter: getter,
+			BackendProxy:         httpProxy,
+		}
+
+		log.Success("http pipe %s -> %s", addr, backendAddr)
 		go frontend.Serve()
 	}
 
