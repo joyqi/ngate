@@ -9,9 +9,19 @@ import (
 	"strings"
 )
 
-const AuthURL = "https://login.work.weixin.qq.com/wwlogin/sso/login"
+type WecomAuthType int8
 
-type WecomAuthCodeURL func(state string) string
+const (
+	TypeWebAuth WecomAuthType = iota
+	TypeAppAuth
+)
+
+const (
+	WebAuthURL = "https://login.work.weixin.qq.com/wwlogin/sso/login"
+	AppAuthURL = "https://open.weixin.qq.com/connect/oauth2/authorize#wechat_redirect"
+)
+
+type WecomAuthCodeURL func(authType WecomAuthType, state string) string
 
 type Wecom struct {
 	BaseAuth
@@ -35,17 +45,25 @@ func NewWecom(cfg *config.AuthConfig, u *url.URL) *Wecom {
 		TokenProvider: &wecom.TokenCache{Store: store},
 	})
 
-	authCodeURL := func(state string) string {
-		authURL, _ := url.Parse(AuthURL)
+	authCodeURL := func(authType WecomAuthType, state string) string {
+		baseURL := WebAuthURL
 
 		v := url.Values{
-			"login_type":   {"CorpApp"},
 			"appid":        {cfg.AppId},
 			"agentid":      {cfg.ClientId},
 			"redirect_uri": {cfg.RedirectURL},
 			"state":        {state},
 		}
 
+		if authType == TypeAppAuth {
+			baseURL = AppAuthURL
+			v.Set("response_type", "code")
+			v.Set("scope", "snsapi_base")
+		} else {
+			v.Set("login_type", "CropApp")
+		}
+
+		authURL, _ := url.Parse(baseURL)
 		authURL.RawQuery = v.Encode()
 		return authURL.String()
 	}
@@ -72,7 +90,13 @@ func (w *Wecom) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Soft
 			session.Set("groups", strings.Join(userInfo.Groups, ","))
 		}
 	} else {
-		redirect(w.AuthCodeURL(w.RequestURL(ctx)))
+		authType := TypeWebAuth
+
+		if strings.Contains(string(ctx.UserAgent()), "/wxwork/") {
+			authType = TypeAppAuth
+		}
+
+		redirect(w.AuthCodeURL(authType, w.RequestURL(ctx)))
 	}
 }
 
