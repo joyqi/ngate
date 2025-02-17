@@ -56,8 +56,8 @@ func (frontend *Frontend) handler(ctx *fasthttp.RequestCtx) {
 
 	defer frontend.close(ctx, session)
 
-	if frontend.Auth.Valid(session) {
-		if frontend.Auth.GroupValid(string(ctx.Request.Host()), session, frontend.GroupValid) {
+	if frontend.Auth.Valid(ctx, session) {
+		if frontend.GroupValid(frontend.Auth.Groups(ctx, session), string(ctx.Request.Host())) {
 			frontend.requestBackend(ctx)
 		} else {
 			ctx.Error("Access Denied", fasthttp.StatusForbidden)

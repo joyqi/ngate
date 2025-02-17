@@ -8,7 +8,6 @@ import (
 	proxy "github.com/yeqown/fasthttp-reverse-proxy/v2"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -43,7 +42,6 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			proxy.WithAddress(backendAddr),
 			proxy.WithDisablePathNormalizing(true),
 			proxy.WithDisableVirtualHost(true),
-			proxy.WithDebug(),
 			proxy.WithTimeout(time.Duration(pipeConfig.Backend.Timeout)*time.Millisecond))
 
 		if proxyErr != nil {
@@ -52,7 +50,6 @@ func New(cfg *config.Config, auth auth.Auth) error {
 
 		wsProxy, wsProxyErr := proxy.NewWSReverseProxyWith(
 			proxy.WithURL_OptionWS("ws://"+backendAddr),
-			proxy.WithDebug_OptionWS(),
 			proxy.WithDynamicPath_OptionWS(true, proxy.DefaultOverrideHeader))
 
 		if wsProxyErr != nil {
@@ -99,11 +96,11 @@ func existsGroup(group string, selectGroups []string) bool {
 }
 
 func groupValid(accessConfig []config.AccessConfig) auth.PipeGroupValid {
-	return func(group string, hostName string) bool {
+	return func(groups []string, hostName string) bool {
 		sg := selectGroups(hostName, accessConfig)
 
 		if sg != nil {
-			for _, g := range strings.Split(group, ",") {
+			for _, g := range groups {
 				if existsGroup(g, sg) {
 					return true
 				}

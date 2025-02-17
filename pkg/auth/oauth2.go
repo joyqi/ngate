@@ -4,18 +4,32 @@ import (
 	"github.com/joyqi/ngate/internal/config"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/oauth2"
+	"net/url"
 )
 
 type OAuth2 struct {
 	BaseAuth
-	Config *config.AuthConfig
+	conf *oauth2.Config
+}
+
+func NewOauth2(cfg *config.AuthConfig, url *url.URL) *OAuth2 {
+	conf := &oauth2.Config{
+		ClientID:     cfg.ClientId,
+		ClientSecret: cfg.AppSecret,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  cfg.AuthorizeURL,
+			TokenURL: cfg.AccessTokenURL,
+		},
+		RedirectURL: cfg.RedirectURL,
+		Scopes:      cfg.Scopes,
+	}
+
+	return &OAuth2{NewBaseAuth(url), conf}
 }
 
 func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
-	conf := oauth.config()
-
 	if oauth.IsCallback(ctx) && ctx.QueryArgs().Has("code") {
-		token, err := conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
+		token, err := oauth.conf.Exchange(ctx, string(ctx.QueryArgs().Peek("code")))
 		if err != nil {
 			ctx.Error("Error Access Token", fasthttp.StatusForbidden)
 		} else {
@@ -30,27 +44,14 @@ func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, session Session, redirect
 			session.Set("access_token", token.AccessToken)
 		}
 	} else {
-		redirect(conf.AuthCodeURL(oauth.RequestURL(ctx)))
+		redirect(oauth.conf.AuthCodeURL(oauth.RequestURL(ctx)))
 	}
 }
 
-func (oauth *OAuth2) Valid(session Session) bool {
+func (oauth *OAuth2) Valid(ctx *fasthttp.RequestCtx, session Session) bool {
 	return session.Get("access_token") != ""
 }
 
-func (oauth *OAuth2) GroupValid(hostName string, session Session, valid PipeGroupValid) bool {
-	return true
-}
-
-func (oauth *OAuth2) config() *oauth2.Config {
-	return &oauth2.Config{
-		ClientID:     oauth.Config.ClientId,
-		ClientSecret: oauth.Config.AppSecret,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  oauth.Config.AuthorizeURL,
-			TokenURL: oauth.Config.AccessTokenURL,
-		},
-		RedirectURL: oauth.Config.RedirectURL,
-		Scopes:      oauth.Config.Scopes,
-	}
+func (oauth *OAuth2) Groups(ctx *fasthttp.RequestCtx, session Session) []string {
+	return nil
 }
