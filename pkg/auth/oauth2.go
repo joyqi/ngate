@@ -12,7 +12,7 @@ type OAuth2 struct {
 	conf *oauth2.Config
 }
 
-func NewOauth2(cfg *config.AuthConfig, url *url.URL) *OAuth2 {
+func NewOauth2(cfg *config.AuthConfig, u *url.URL) *OAuth2 {
 	conf := &oauth2.Config{
 		ClientID:     cfg.ClientId,
 		ClientSecret: cfg.AppSecret,
@@ -24,7 +24,7 @@ func NewOauth2(cfg *config.AuthConfig, url *url.URL) *OAuth2 {
 		Scopes:      cfg.Scopes,
 	}
 
-	return &OAuth2{NewBaseAuth(url), conf}
+	return &OAuth2{NewBaseAuth(u), conf}
 }
 
 func (oauth *OAuth2) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {

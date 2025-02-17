@@ -17,7 +17,7 @@ type Feishu struct {
 	conf *feishu.Config
 }
 
-func NewFeishu(cfg *config.AuthConfig, url *url.URL) *Feishu {
+func NewFeishu(cfg *config.AuthConfig, u *url.URL) *Feishu {
 	kind := feishu.TypeFeishu
 
 	if cfg.Kind == "lark" {
@@ -31,7 +31,7 @@ func NewFeishu(cfg *config.AuthConfig, url *url.URL) *Feishu {
 		RedirectURL: cfg.RedirectURL,
 	}
 
-	return &Feishu{NewBaseAuth(url), conf}
+	return &Feishu{NewBaseAuth(u), conf}
 }
 
 func (f *Feishu) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {

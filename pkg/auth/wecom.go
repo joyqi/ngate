@@ -4,11 +4,12 @@ import (
 	"github.com/joyqi/ngate/internal/config"
 	"github.com/valyala/fasthttp"
 	"github.com/wenerme/go-wecom/wecom"
-	"github.com/wenerme/go-wecom/wecom/auth"
 	"net/url"
 	"strconv"
 	"strings"
 )
+
+const AuthURL = "https://login.work.weixin.qq.com/wwlogin/sso/login"
 
 type WecomAuthCodeURL func(state string) string
 
@@ -23,7 +24,7 @@ type WecomUserInfo struct {
 	Groups []string
 }
 
-func NewWecom(cfg *config.AuthConfig, url *url.URL) *Wecom {
+func NewWecom(cfg *config.AuthConfig, u *url.URL) *Wecom {
 	agentId, _ := strconv.Atoi(cfg.ClientId)
 	store := &wecom.SyncMapStore{}
 
@@ -35,17 +36,21 @@ func NewWecom(cfg *config.AuthConfig, url *url.URL) *Wecom {
 	})
 
 	authCodeURL := func(state string) string {
-		return auth.BuildOAuth2URL(auth.BuildOAuth2URLOptions{
-			AppID:        cfg.AppId,
-			RedirectURI:  cfg.RedirectURL,
-			ResponseType: "code",
-			Scope:        "snsapi_base",
-			State:        state,
-			AgentID:      cfg.ClientId,
-		})
+		authURL, _ := url.Parse(AuthURL)
+
+		v := url.Values{
+			"login_type":   {"CorpApp"},
+			"appid":        {cfg.AppId},
+			"agentid":      {cfg.ClientId},
+			"redirect_uri": {cfg.RedirectURL},
+			"state":        {state},
+		}
+
+		authURL.RawQuery = v.Encode()
+		return authURL.String()
 	}
 
-	return &Wecom{NewBaseAuth(url), client, authCodeURL}
+	return &Wecom{NewBaseAuth(u), client, authCodeURL}
 }
 
 func (w *Wecom) Handler(ctx *fasthttp.RequestCtx, session Session, redirect SoftRedirect) {
