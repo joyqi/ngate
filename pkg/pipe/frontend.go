@@ -83,17 +83,6 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 	} else {
 		frontend.BackendProxy.ServeHTTP(ctx)
 	}
-
-	/*
-		if err := frontend.BackendProxy.DoTimeout(req, resp, frontend.BackendTimeout); err != nil {
-			if errors.Is(err, fasthttp.ErrTimeout) {
-				ctx.Error(err.Error(), fasthttp.StatusRequestTimeout)
-			} else {
-				ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
-			}
-			log.Error("%s %s%s %s", req.Header.Method(), req.Host(), req.RequestURI(), err.Error())
-		}
-	*/
 }
 
 func (frontend *Frontend) close(ctx *fasthttp.RequestCtx, session *SessionStore) {
