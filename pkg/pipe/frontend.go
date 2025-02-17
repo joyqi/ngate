@@ -20,23 +20,6 @@ type Frontend struct {
 	BackendProxy    *proxy.ReverseProxy
 }
 
-// Hop-by-hop headers. These are removed when sent to the backend.
-// As of RFC 7230, hop-by-hop headers are required to appear in the
-// Connection header field. These are the headers defined by the
-// obsoleted RFC 2616 (section 13.5.1) and are used for backward
-// compatibility.
-var hopHeaders = []string{
-	"Connection",          // Connection
-	"Proxy-Connection",    // non-standard but still sent by libcurl and rejected by e.g. google
-	"Keep-Alive",          // Keep-Alive
-	"Proxy-Authenticate",  // Proxy-Authenticate
-	"Proxy-Authorization", // Proxy-Authorization
-	"Te",                  // canonicalized version of "TE"
-	"Trailer",             // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
-	"Transfer-Encoding",   // Transfer-Encoding
-	"Upgrade",             // Upgrade
-}
-
 func (frontend *Frontend) Serve() {
 	defer frontend.Wait.Done()
 
@@ -101,10 +84,6 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 		frontend.BackendProxy.ServeHTTP(ctx)
 	}
 
-	// for _, h := range hopHeaders {
-	//	req.Header.Del(h)
-	// }
-
 	/*
 		if err := frontend.BackendProxy.DoTimeout(req, resp, frontend.BackendTimeout); err != nil {
 			if errors.Is(err, fasthttp.ErrTimeout) {
@@ -115,10 +94,6 @@ func (frontend *Frontend) requestBackend(ctx *fasthttp.RequestCtx) {
 			log.Error("%s %s%s %s", req.Header.Method(), req.Host(), req.RequestURI(), err.Error())
 		}
 	*/
-
-	// for _, h := range hopHeaders {
-	//	resp.Header.Del(h)
-	// }
 }
 
 func (frontend *Frontend) close(ctx *fasthttp.RequestCtx, session *SessionStore) {
