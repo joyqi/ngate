@@ -60,7 +60,7 @@ func NewWecom(cfg *config.AuthConfig, u *url.URL) *Wecom {
 			v.Set("response_type", "code")
 			v.Set("scope", "snsapi_base")
 		} else {
-			v.Set("login_type", "CropApp")
+			v.Set("login_type", "CorpApp")
 		}
 
 		authURL, _ := url.Parse(baseURL)
@@ -92,7 +92,7 @@ func (w *Wecom) Handler(ctx *fasthttp.RequestCtx, session Session, redirect Soft
 	} else {
 		authType := TypeWebAuth
 
-		if strings.Contains(string(ctx.UserAgent()), "/wxwork/") {
+		if strings.Contains(string(ctx.UserAgent()), "wxwork") {
 			authType = TypeAppAuth
 		}
 
