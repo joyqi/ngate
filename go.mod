@@ -27,4 +27,4 @@ require (
 	golang.org/x/net v0.35.0 // indirect
 )
 
-replace github.com/yeqown/fasthttp-reverse-proxy/v2 => github.com/joyqi/fasthttp-reverse-proxy/v2 v2.0.0-20250219055808-742cf0cd6cbc
+replace github.com/yeqown/fasthttp-reverse-proxy/v2 => github.com/joyqi/fasthttp-reverse-proxy/v2 v2.0.0-20250219074248-3e2615657212

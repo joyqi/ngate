@@ -26,6 +26,7 @@ func (frontend *Frontend) Serve() {
 	s := fasthttp.Server{
 		Handler:                       frontend.handler,
 		ReadBufferSize:                64 * 1024,
+		StreamRequestBody:             true,
 		DisablePreParseMultipartForm:  true,
 		DisableHeaderNamesNormalizing: true,
 	}
