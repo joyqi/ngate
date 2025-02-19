@@ -42,6 +42,7 @@ func New(cfg *config.Config, auth auth.Auth) error {
 			proxy.WithAddress(backendAddr),
 			proxy.WithDisablePathNormalizing(true),
 			proxy.WithDisableVirtualHost(true),
+			proxy.WithStreamResponseBody(),
 			proxy.WithTimeout(time.Duration(pipeConfig.Backend.Timeout)*time.Millisecond))
 
 		if proxyErr != nil {
